@@ -124,6 +124,7 @@ class PyRadioConfigWindow():
         _tts_pitch_data = (-100, 100, 1)
     _help_text.append(['This is the verbosity to be used by the TTS engine.', '|', 'When set to punctuation, the engine will read aloud all punctuation marks as if they were regular words.', '|', 'Example:', 'The text "this option is read-only" will be spoken as:', '  - Verbosity "default":', '      this option is read only', '  - Verbosity "punctuation":','      this option is read dash only', '|', '|', 'Default value: default'])
     _help_text.append(['This is the context spoken by the TTS engine.', '|', 'Values are:', '  limited: system messages and errors, station data', '  window: also speak windows text', '  all: speak everything provided', '|', 'Default value: all'])
+    _help_text.append(['If this parameter is set to 0, volume changes will not be spoken out, any other value will make the current volume value to be heard.', '|', 'Valid values are:', '           0: disabled', '    300-3000: speak delay in msec', '|', 'Default value: 0'])
     _help_text.append(None)
     _help_text.append(['If this option is enabled, the current time will be displayed at the bottom left corner of the window at program startup.', '|', 'Adjust the time format in the next option to change how the current time is displayed.', '|', r'You can always hide it by pressing ' + to_str('open_extra') + to_str('toggle_time') +  '.', '|', 'Default value: False'])
     _help_text.append(['This is the time format to be used when the clock is visible.', '|', 'Available values are:', '   0: 24h, with seconds', '   1: 24h, no seconds', '   2: 12h, with am/pm and seconds', '   3: 12h, no am/pm, with seconds', '   4: 12h, with am/pm, no seconds', '   5: 12h, no am/pm, no seconds', '|', 'Default value: 1'])
@@ -856,6 +857,7 @@ class PyRadioConfigWindow():
                     pitch=lambda: self._config_options['tts_pitch'][1],
                     verbosity=lambda: self._config_options['tts_verbosity'][1],
                     context=lambda: self._config_options['tts_context'][1],
+                    speak_volume=lambda: self._config_options['tts_speak_volume'][1],
                     tts_in_config=lambda: True,
                 )
                 if not self.tmp_tts.available:
@@ -876,6 +878,7 @@ class PyRadioConfigWindow():
                 'tts_volume',
                 'tts_rate',
                 'tts_pitch',
+                'tts_speak_volume',
             ) and char in (
                 curses.KEY_LEFT,
                 curses.KEY_RIGHT,
@@ -1285,6 +1288,39 @@ class PyRadioConfigWindow():
                     str(t) + '    ', curses.color_pair(6))
                 self._print_title()
                 self._win.refresh()
+                return -1, []
+
+        elif val[0] == 'tts_speak_volume':
+            if char in (curses.KEY_RIGHT, kbkey['l']) or \
+                    check_localized(char, (kbkey['l'], )):
+                t = int(val[1][1])
+                if t < 3000:
+                    t+= 100
+                    if t > 3000:
+                        t = 3000
+                    if t < 300:
+                        t = 300
+                    self._config_options[val[0]][1] = str(t)
+                    self._win.addstr(
+                        Y, 3 + len(val[1][0]),
+                        str(t) + '    ', curses.color_pair(6))
+                    self._print_title()
+                    self._win.refresh()
+                return -1, []
+
+            if char in (curses.KEY_LEFT, kbkey['h']) or \
+                    check_localized(char, (kbkey['h'], )):
+                t = int(val[1][1])
+                if t >= 300:
+                    t -= 100
+                    if t < 300:
+                        t = 0
+                    self._config_options[val[0]][1] = str(t)
+                    self._win.addstr(
+                        Y, 3 + len(val[1][0]),
+                        str(t) + '    ', curses.color_pair(6))
+                    self._print_title()
+                    self._win.refresh()
                 return -1, []
 
         elif val[0] == 'tts_verbosity':

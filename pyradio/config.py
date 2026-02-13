@@ -1357,6 +1357,7 @@ class PyRadioConfig(PyRadioStations):
         self.opts['tts_pitch'] = ['  Pitch: ', '0']
         self.opts['tts_verbosity'] = ['Verbosity: ', 'default']
         self.opts['tts_context'] = ['Context: ', 'all']
+        self.opts['tts_speak_volume'] = ['Speak volume change: ', '0']
         self.opts['clock_title'] = ['Clock', '']
         self.opts['enable_clock'] = ['Display on startup: ', False]
         self.opts['time_format'] = ['Time format: ', '1']
@@ -1763,6 +1764,14 @@ class PyRadioConfig(PyRadioStations):
             set_val = 'limited'
         self.opts['tts_context'][1] = set_val
         self.opts['dirty_config'][1] = True
+
+    @property
+    def tts_speak_volume(self):
+        return self.opts['tts_speak_volume'][1]
+
+    @tts_speak_volume.setter
+    def tts_speak_volume(self, val):
+        self.opts['tts_speak_volume'][1] = val
 
     @property
     def player(self):
@@ -2634,6 +2643,14 @@ class PyRadioConfig(PyRadioStations):
                     self.opts['tts_context'][1] = 'window'
                 elif cont == 'limited':
                     self.opts['tts_context'][1] = 'limited'
+            elif sp[0] == 'tts_speak_volume':
+                try:
+                    speak_vol = int(sp[1])
+                except ValueError:
+                    speak_vol = 0
+                if not 300 < speak_vol < 3000:
+                    speak_vol = 0
+                self.opts['tts_speak_volume'][1] = str(speak_vol)
             elif sp[0] == 'confirm_station_deletion':
                 if sp[1].lower() == 'false':
                     self.opts['confirm_station_deletion'][1] = False

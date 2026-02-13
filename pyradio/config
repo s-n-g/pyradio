@@ -47,10 +47,10 @@ continuous_playback = False
 # Default value: False
 enable_mouse = False
 
-# When mouse support is enabled, the Wheel normally scrolls up and down within 
-# the playlist, moving the selection, while Shift-Wheel adjusts the volume. 
-# If this option is enabled, the functionality will be reversed: the Wheel will 
-# adjust the volume instead, and Shift-Wheel will be used to scroll through the 
+# When mouse support is enabled, the Wheel normally scrolls up and down within
+# the playlist, moving the selection, while Shift-Wheel adjusts the volume.
+# If this option is enabled, the functionality will be reversed: the Wheel will
+# adjust the volume instead, and Shift-Wheel will be used to scroll through the
 # playlist.
 #
 # Default value: False
@@ -84,7 +84,7 @@ resource_opener = auto
 # displayed at the bottom left corner of the window.
 #
 # The format of the displayed time can be set to one of the following:
-# 
+#
 #        0 : Display 24h format, with seconds
 #        1 : Display 24h format, no seconds
 #        2 : Display 12h format, with AM/PM and seconds
@@ -127,7 +127,7 @@ use_station_icon = True
 remove_station_icons = True
 
 # TTS
-# Enables PyRadio Text-to-Speech feature, provided that such a feature is 
+# Enables PyRadio Text-to-Speech feature, provided that such a feature is
 # already supported by the system.
 #
 # Default value: False
@@ -155,7 +155,7 @@ tts_pitch = 0
 
 # TTS verbosity
 # This is the verbosity to be used by the TTS engine
-# When set to "punctuation", punctuation will be 
+# When set to "punctuation", punctuation will be
 # spoken as if it was a real word in the text.
 # Example:
 # The text "this option is read-only" will be spoken as
@@ -175,11 +175,22 @@ tts_verbosity = default
 #   Default value: limited
 tts_context = all
 
+# Enable speaking TTS volume changes
+# If this parameter is set to 0, volume changes will not be spoken out,
+# any other value will make the current volume value to be heard.
+#
+# Valid values are:
+#          0: disabled
+#   300-3000: speak delay in msec
+#
+# Default value = 0
+tts_speak_volume = 0
+
 # Titles logging
 # If this option is True, PyRadio will start logging song titles to a log file
 # at startup, provided that the station playing does provide title data.
 #
-# This is the same as using the -lt command line parameter, or pressing "W" 
+# This is the same as using the -lt command line parameter, or pressing "W"
 # while the program is running.
 #
 # Default value: False
@@ -203,7 +214,7 @@ connection_timeout = 10
 # Default value: False
 force_http = False
 
-# Buffering 
+# Buffering
 # This is the number of seconds the players will buffer data
 # before actually starting producing sound
 #
