@@ -186,6 +186,14 @@ tts_context = all
 # Default value = 0
 tts_speak_volume = 0
 
+# Speak volume change start
+# If the previous parameter is enabled, enabling this one too will issue both
+# a start and an end volume change TTS notification. If set to False (the
+# default), only the end TTS notification will be issued.
+#
+# Default value: False
+tts_speak_volume_start = False
+
 # Titles logging
 # If this option is True, PyRadio will start logging song titles to a log file
 # at startup, provided that the station playing does provide title data.

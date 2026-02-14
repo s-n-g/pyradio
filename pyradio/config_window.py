@@ -125,6 +125,7 @@ class PyRadioConfigWindow():
     _help_text.append(['This is the verbosity to be used by the TTS engine.', '|', 'When set to punctuation, the engine will read aloud all punctuation marks as if they were regular words.', '|', 'Example:', 'The text "this option is read-only" will be spoken as:', '  - Verbosity "default":', '      this option is read only', '  - Verbosity "punctuation":','      this option is read dash only', '|', '|', 'Default value: default'])
     _help_text.append(['This is the context spoken by the TTS engine.', '|', 'Values are:', '  limited: system messages and errors, station data', '  window: also speak windows text', '  all: speak everything provided', '|', 'Default value: all'])
     _help_text.append(['If this parameter is set to 0, volume changes will not be spoken out, any other value will make the current volume value to be heard.', '|', 'Valid values are:', '           0: disabled', '    300-3000: speak delay in msec', '|', 'Default value: 0'])
+    _help_text.append(['If the previous parameter is enabled, enabling this one too will issue both a start and an end volume change TTS notification. If set to False (the default), only the end TTS notification will be issued.', '|', 'Default value: False'])
     _help_text.append(None)
     _help_text.append(['If this option is enabled, the current time will be displayed at the bottom left corner of the window at program startup.', '|', 'Adjust the time format in the next option to change how the current time is displayed.', '|', r'You can always hide it by pressing ' + to_str('open_extra') + to_str('toggle_time') +  '.', '|', 'Default value: False'])
     _help_text.append(['This is the time format to be used when the clock is visible.', '|', 'Available values are:', '   0: 24h, with seconds', '   1: 24h, no seconds', '   2: 12h, with am/pm and seconds', '   3: 12h, no am/pm, with seconds', '   4: 12h, with am/pm, no seconds', '   5: 12h, no am/pm, no seconds', '|', 'Default value: 1'])
@@ -858,6 +859,7 @@ class PyRadioConfigWindow():
                     verbosity=lambda: self._config_options['tts_verbosity'][1],
                     context=lambda: self._config_options['tts_context'][1],
                     speak_volume=lambda: self._config_options['tts_speak_volume'][1],
+                    speak_volume_start=lambda: self._config_options['tts_speak_volume_start'][1],
                     tts_in_config=lambda: True,
                 )
                 if not self.tmp_tts.available:
@@ -1389,8 +1391,10 @@ class PyRadioConfigWindow():
                 'remove_station_icons',
                 'mplayer_save_br',
                 'continuous_playback',
-                'enable_tts'
+                'enable_tts',
+                'tts_speak_volume_start',
             ):
+                logger.error('5')
                 self._config_options[sel][1] = not self._config_options[sel][1]
                 # # if sel == 'open_last_playlist':
                 # #     if self._config_options[sel][1]:

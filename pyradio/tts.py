@@ -150,13 +150,14 @@ class TTSRequest:
 class TTSBase:
     """Base class for TTS implementations"""
 
-    def __init__(self, config, volume, rate, pitch, verbosity, speak_volume):
+    def __init__(self, config, volume, rate, pitch, verbosity, speak_volume, speak_volume_start):
         self.config = config
         self.volume = volume
         self.rate = rate
         self.pitch = pitch
         self.verbosity = verbosity
         self.speak_volume = speak_volume
+        self.speak_volume_start = speak_volume_start
         self.system = platform.system()
         self.state = TTSState.IDLE
         self._current_process = None
@@ -207,8 +208,8 @@ class TTSBase:
 class TTSLinux(TTSBase):
     """Linux TTS implementation using user-configured command"""
 
-    def __init__(self, config, volume, rate, pitch, verbosity, speak_volume):
-        super().__init__(config, volume, rate, pitch, verbosity, speak_volume)
+    def __init__(self, config, volume, rate, pitch, verbosity, speak_volume, speak_volume_start):
+        super().__init__(config, volume, rate, pitch, verbosity, speak_volume, speak_volume_start)
         self.retry_count = 0
         self.max_retries = 2
 
@@ -393,8 +394,8 @@ class TTSLinux(TTSBase):
 class TTSWindows(TTSBase):
     """Windows TTS implementation using win32com and SAPI"""
 
-    def __init__(self, config, volume, rate, pitch, verbosity, speak_volume):
-        super().__init__(config, volume, rate, pitch, verbosity, speak_volume)
+    def __init__(self, config, volume, rate, pitch, verbosity, speak_volume, speak_volume_start):
+        super().__init__(config, volume, rate, pitch, verbosity, speak_volume, speak_volume_start)
         self.speaker = win32com.client.Dispatch("SAPI.SpVoice")
 
         # Try to set an English voice
@@ -519,8 +520,8 @@ class TTSWindows(TTSBase):
 class TTSMacOS(TTSBase):
     """macOS TTS implementation with improved interruption handling"""
 
-    def __init__(self, config, volume, rate, pitch, verbosity, speak_volume):
-        super().__init__(config, volume, rate, pitch, verbosity, speak_volume)
+    def __init__(self, config, volume, rate, pitch, verbosity, speak_volume, speak_volume_start):
+        super().__init__(config, volume, rate, pitch, verbosity, speak_volume, speak_volume_start)
         self._current_process = None
         self._lock = threading.RLock()
         self._speech_start_delay = 0.15
@@ -682,7 +683,10 @@ class TTSManager:
     Main TTS manager with priority-based queue and title preservation
     """
 
-    def __init__(self, volume, rate, pitch, verbosity, context, speak_volume, tts_in_config, enabled=True):
+    def __init__(
+            self, volume, rate, pitch, verbosity, context,
+            speak_volume, speak_volume_start, tts_in_config,
+            enabled=True):
         self.stop_after_high = False
         self.enabled = enabled
         self.volume = volume
@@ -691,6 +695,7 @@ class TTSManager:
         self.verbosity = verbosity
         self.context = context
         self.speak_volume = speak_volume
+        self.speak_volume_start = speak_volume_start
         self.config = TTSConfig()
         self.system = platform.system()
         self.available = False
@@ -832,10 +837,10 @@ class TTSManager:
     def _create_engine(self):
         """Create the appropriate TTS engine for the current platform"""
         if self.system == "Windows":
-            return TTSWindows(self.config, self.volume, self.rate, self.pitch, self.verbosity, self.speak_volume)
+            return TTSWindows(self.config, self.volume, self.rate, self.pitch, self.verbosity, self.speak_volume, self.speak_volume_start)
         if self.system == "Darwin":
-            return TTSMacOS(self.config, self.volume, self.rate, self.pitch, self.verbosity, self.speak_volume)
-        return TTSLinux(self.config, self.volume, self.rate, self.pitch, self.verbosity, self.speak_volume)
+            return TTSMacOS(self.config, self.volume, self.rate, self.pitch, self.verbosity, self.speak_volume, self.speak_volume_start)
+        return TTSLinux(self.config, self.volume, self.rate, self.pitch, self.verbosity, self.speak_volume, self.speak_volume_start)
 
     def _check_linux_availability(self):
         """Check if spd-say is available on Linux"""
@@ -1140,27 +1145,31 @@ class TTSManager:
                         logger.debug('Rejecting volume request: tts_speak_volume = 0')
                     return True
 
+                # Prepare the TTS notification
                 self._pending_volume_request = TTSRequest(text, priority)
-                now_vol_init = datetime.now()
-                diff = now_vol_init - self._vol_init
-                msec_diff = (1000 * diff.seconds + diff.microseconds // 1000) // 1000
-                logger.error('====================')
-                logger.error(f'{now_vol_init = }')
-                logger.error(f'{self._vol_init = }')
-                logger.error(f'{diff = }')
-                logger.error(f'{msec_diff = }')
-                logger.error(f'{delay_volume_speak = }')
-                logger.error('====================')
-                if msec_diff > 2.5 * delay_volume_speak and \
-                        self._volume_spoken:
-                    self._vol_init = now_vol_init
-                    volume_request = TTSRequest(
-                        'Volume change initiated',
-                        priority
-                    )
-                    self.high_priority_queue.put(volume_request)
-                    self._volume_spoken = False
-                    return True
+
+                # Check if speaking start start of volume change
+                if self.speak_volume_start():
+                    now_vol_init = datetime.now()
+                    diff = now_vol_init - self._vol_init
+                    sec_diff = diff.seconds + diff.microseconds // 1000000
+                    logger.error('====================')
+                    logger.error(f'{now_vol_init = }')
+                    logger.error(f'{self._vol_init = }')
+                    logger.error(f'{diff = }')
+                    logger.error(f'{sec_diff = }')
+                    logger.error(f'{delay_volume_speak = }')
+                    logger.error('====================')
+                    if sec_diff > 2.5 * delay_volume_speak and \
+                            self._volume_spoken:
+                        self._vol_init = now_vol_init
+                        volume_request = TTSRequest(
+                            'Volume change initiated',
+                            priority
+                        )
+                        self.high_priority_queue.put(volume_request)
+                        self._volume_spoken = False
+                        return True
 
                 # Save volume value
                 if logger.isEnabledFor(logging.DEBUG):

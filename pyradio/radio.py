@@ -514,6 +514,7 @@ class PyRadio():
         self._tts_verbosity = pyradio_config.tts_verbosity
         self._tts_context = pyradio_config.tts_context
         self._tts_speak_volume = pyradio_config.tts_speak_volume
+        self._tts_speak_volume_start = pyradio_config.tts_speak_volume_start
         self._enable_tts = pyradio_config.enable_tts
         self.ws = Window_Stack(self._speak_selection)
         self.player = None
@@ -2113,6 +2114,7 @@ effectively putting <b>PyRadio</b> in <span style="font-weight:bold; color: Gree
                 verbosity=lambda: self._tts_verbosity,
                 context=lambda: self._tts_context,
                 speak_volume=lambda: self._tts_speak_volume,
+                speak_volume_start=lambda: self._tts_speak_volume_start,
                 tts_in_config=lambda: self._tts_in_config,
             )
             ''' start update detection and notification thread '''
@@ -7340,6 +7342,7 @@ _____"|f|" to see the |free| keys you can use.
                     verbosity=lambda: self._tts_verbosity,
                     context=lambda: self._tts_context,
                     speak_volume=lambda: self._tts_speak_volume,
+                    speak_volume_start=lambda: self._tts_speak_volume_start,
                     tts_in_config=lambda: self._tts_in_config,
                 )
                 if self._enable_tts:
@@ -8249,6 +8252,7 @@ _____"|f|" to see the |free| keys you can use.
                         self._tts_verbosity = self._cnf.tts_verbosity
                         self._tts_context = self._cnf.tts_context
                         self._tts_speak_volume = self._cnf.tts_speak_volume
+                        self._tts_speak_volume_start = self._cnf.tts_speak_volume_start
                         if not self._enable_tts and \
                                 self._enable_tts != self._cnf.enable_tts:
                             self._enable_tts = self._cnf.enable_tts
