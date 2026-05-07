@@ -1043,6 +1043,7 @@ PgUp| / |PgDn                       <*> Move by page.
 Home| / |End                        <*> Jump to first / last result.
 Left| / |Right                      <*> Move cursor in query.
 Backspace                           <*> Delete previous character.
+^N| / |^P                           <*> Navigate history.
 ?                                   <*> Show this help.
 '''
 ), Priority.HELP),

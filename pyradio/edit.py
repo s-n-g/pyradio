@@ -393,6 +393,8 @@ class PyRadioFuzzyStationFinder:
                 cursor_color=curses.color_pair(8),
                 search_history_file=self._history_file,
                 is_locked=self._is_locked,
+                key_up_function_handler=self._get_history_previous,
+                key_down_function_handler=self._get_history_next,
             )
 
         max_y, max_x = self._parent.getmaxyx()
@@ -425,6 +427,18 @@ class PyRadioFuzzyStationFinder:
             new_x=x + 2,
             opening=False
         )
+        self._editor.string = self._query
+        self._editor.refreshEditWindow()
+        self._draw_matches()
+
+    def _get_history_next(self):
+        self._query = self._editor._input_history.return_history(1, self._editor.string)
+        self._editor.string = self._query
+        self._editor.refreshEditWindow()
+        self._draw_matches()
+
+    def _get_history_previous(self):
+        self._query = self._editor._input_history.return_history(-1, self._editor.string)
         self._editor.string = self._query
         self._editor.refreshEditWindow()
         self._draw_matches()
