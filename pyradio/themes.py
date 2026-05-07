@@ -960,7 +960,7 @@ class PyRadioThemeSelector():
                  title_color_pair, box_color_pair,
                  applied_color_pair, normal_color_pair,
                  cursor_color_pair, applied_cursor_color_pair,
-                 is_watched, a_lock, log_file=''):
+                 is_watched, a_lock, log_file='', speak=None):
         self._win = None
         self._global_functions = None
         self._width = self._height = self.X = self.Y = 0
@@ -968,6 +968,8 @@ class PyRadioThemeSelector():
         self._start_pos = 0
         self._first_theme_to_watch = 0
         self._applied_theme = -1
+        self._speak = speak
+        self._first_time_spoken = False
 
         self._themes = []
         self._title_ids = []
@@ -1389,6 +1391,9 @@ class PyRadioThemeSelector():
                 self._win.addstr(self._height-1, self._width - 4, '[F]', curses.color_pair(self._box_color_pair))
         self._win.refresh()
         curses.doupdate()
+        if not self._first_time_spoken and self._speak:
+            self._first_time_spoken = True
+            self._speak(args=(self._themes[self._selection][0], ))
         self._showed = True
 
     def _draw_box(self):
@@ -1469,7 +1474,12 @@ class PyRadioThemeSelector():
               False : theme is not to be saved in config
         """
         l_char = None
-        if  self._too_small or self._cnf.locked:
+        if self._too_small or self._cnf.locked:
+            if self._speak:
+                if self._too_small:
+                    self._speak(msg='Window too small')
+                else:
+                    self._speak(msg='Session is locked')
             return -1, False
         if char in self._global_functions or \
                 (l_char := check_localized(char, self._global_functions.keys(), True)) is not None:
@@ -1493,6 +1503,8 @@ class PyRadioThemeSelector():
             # not implemented yet
         elif char == kbkey['reload'] or \
                 check_localized(char, (kbkey['reload'], )):
+            if self._speak:
+                self._speak(msg='Themes reloaded', navigation=True)
             return -4, False
         elif char in (curses.KEY_ENTER, ord('\n'), ord('\r'),
                       kbkey['l'], curses.KEY_RIGHT) or \
@@ -1503,6 +1515,8 @@ class PyRadioThemeSelector():
             #    self._config_theme = self._selection
             #    self._config_theme_name = self._themes[self._selection][0]
             self.refresh()
+            if self._speak:
+                self._speak(msg='Theme applied', navigation=True)
             return self._selection, False
         elif char in (kbkey['pause'], kbkey['s'], kbkey['watch_theme']) or \
                 check_localized(char, (kbkey['pause'], kbkey['s'])):
@@ -1531,19 +1545,27 @@ class PyRadioThemeSelector():
                         if logger.isEnabledFor(logging.DEBUG):
                             logger.debug(f'Theme set to auto update: "{self._applied_theme_name}"')
             self.refresh()
+            if self._speak:
+                self._speak(msg='Theme saved', navigation=True)
             return self._selection, True
         elif char in (curses.KEY_UP, kbkey['k']) or \
                 check_localized(char, (kbkey['k'], )):
             self.jumpnr = ''
             self._go_up()
+            if self._speak:
+                self._speak(msg=self._themes[self._selection][0], navigation=True)
         elif char in (curses.KEY_DOWN, kbkey['j']) or \
                 check_localized(char, (kbkey['j'], )):
             self.jumpnr = ''
             self._go_down()
+            if self._speak:
+                self._speak(msg=self._themes[self._selection][0], navigation=True)
         elif char in (curses.KEY_HOME, kbkey['g']) or \
                 check_localized(char, (kbkey['g'], )):
             self.jumpnr = ''
             self._go_home()
+            if self._speak:
+                self._speak(msg=self._themes[self._selection][0], navigation=True)
         elif char in (curses.KEY_END, kbkey['G']) or \
                 check_localized(char, (kbkey['G'], )):
             if self.jumpnr == '':
@@ -1555,6 +1577,8 @@ class PyRadioThemeSelector():
                 if num >= 0:
                     self.selection = num
                     self.jumpnr = ''
+            if self._speak:
+                self._speak(msg=self._themes[self._selection][0], navigation=True)
         elif char in (curses.KEY_NPAGE, ):
             self.jumpnr = ''
             sel = self._selection + self._page_jump
@@ -1565,6 +1589,8 @@ class PyRadioThemeSelector():
             elif sel >= len(self._themes):
                 sel = len(self._themes) - 1
             self.selection = sel
+            if self._speak:
+                self._speak(msg=self._themes[self._selection][0], navigation=True)
         elif char in (curses.KEY_PPAGE, ):
             self.jumpnr = ''
             sel = self._selection - self._page_jump
@@ -1575,6 +1601,8 @@ class PyRadioThemeSelector():
             elif sel < 0:
                 sel = 0
             self.selection = sel
+            if self._speak:
+                self._speak(msg=self._themes[self._selection][0], navigation=True)
         elif char in map(ord,map(str,range(0, 10))):
             self.jumpnr += chr(char)
         elif char in (curses.KEY_EXIT, 27, kbkey['q'], kbkey['h'], curses.KEY_LEFT) or \

@@ -70,11 +70,15 @@ TTS_WINDOWS_TEXT = {
     Window_Stack_Constants.SELECT_ENCODING_MODE:
         lambda it: f'''Window: Encoding selection.
             Current item: {it}
-        ''',    Window_Stack_Constants.EDIT_STATION_ENCODING_MODE:
+        ''',
+    Window_Stack_Constants.EDIT_STATION_ENCODING_MODE:
         lambda it: f'''Window: Encoding selection.
             Current item: {it}
         ''',
-
+    Window_Stack_Constants.THEME_MODE:
+        lambda it: f'''Window: Theme Selection.
+            Current item: {it}
+        ''',
 }
 
 def describe_single_key(key_string):

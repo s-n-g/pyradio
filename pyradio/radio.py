@@ -3322,7 +3322,8 @@ effectively putting <b>PyRadio</b> in <span style="font-weight:bold; color: Gree
             self._cnf.theme,
             11, 3, 11, 10, 6, 9,
             self._cnf.auto_update_theme,
-            self._watch_theme_lock
+            self._watch_theme_lock,
+            speak=self._speak_window if self._enable_tts and self._cnf.tts_context != 'limited' else None,
         )
             #'/home/spiros/edit.log')
         self._theme_selector.changed_from_config = changed_from_config
