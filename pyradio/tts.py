@@ -163,7 +163,7 @@ class TTSBase:
         self._current_process = None
         self._lock = threading.RLock()
         self.speech_delay = 0.3  # Anti-stutter delay
-
+        self.enabled = True
         # External stop mechanism for DIALOG and NAVIGATION interruption
         self._external_stop_requested = threading.Event()
         self._external_stop_lock = threading.RLock()

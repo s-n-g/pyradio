@@ -3402,6 +3402,8 @@ effectively putting <b>PyRadio</b> in <span style="font-weight:bold; color: Gree
             else:
                 if logger.isEnabledFor(logging.DEBUG):
                     logger.debug('opening WITHOUT argument')
+                if self.ws.operation_mode == self.ws.CONFIG_MODE:
+                    self._config_win.reset_old_selection()
                 self._open_message_win_by_key(self._help_keys[self.ws.operation_mode])
             return
         self._redisplay[self.ws.operation_mode]()
@@ -5203,6 +5205,11 @@ and |remove the file manually|.
 
     def _show_config_window(self):
         if self._config_win is None:
+            self._help_keys[self.ws.CONFIG_MODE] = 'H_CONFIG'
+            if self.tts:
+                if hasattr(self.tts, 'enabled'):
+                    if self.tts.enabled:
+                        self._help_keys[self.ws.CONFIG_MODE] = 'H_CONFIG_TTS'
             self._config_win = PyRadioConfigWindow(
                 self.outerBodyWin,
                 lambda: self.player.recording > 0 and self.player.isPlaying(),

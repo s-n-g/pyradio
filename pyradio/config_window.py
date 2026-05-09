@@ -180,6 +180,7 @@ class PyRadioConfigWindow():
             op_mode=0,
             ):
         self.tmp_tts = None
+        self._first_item_spoken = False
         self._max_start = 0
         self._column = 0
         self._column = 0
@@ -355,7 +356,7 @@ class PyRadioConfigWindow():
             if this_header == self._current_header:
                 msg = f'{self._it_list[self.__selection][0]}'
             else:
-                msg = f'{self._it_list[this_header][0]} , curent item is {self._it_list[self.__selection][0]}'
+                msg = f'{self._it_list[this_header][0]} , current item is {self._it_list[self.__selection][0]}'
         else:
             if this_header == self._current_header:
                 if self.__selection == self.__old_selection:
@@ -363,13 +364,16 @@ class PyRadioConfigWindow():
                 else:
                     msg = f'{self._it_list[self.__selection][0][:-2]} , value is {self._it_list[self.__selection][1]}'
             else:
-                msg = f'{self._it_list[this_header][0]} , curent item is {self._it_list[self.__selection][0][:-2]} , value is {self._it_list[self.__selection][1]}'
+                msg = f'{self._it_list[this_header][0]} , current item is {self._it_list[self.__selection][0][:-2]} , value is {self._it_list[self.__selection][1]}'
         self._current_header = this_header
         self.__old_selection = self.__selection
 
         if cur_key == 'remote_control_server_ip':
             msg = msg.replace('.', ' dot ')
-        # logger.error(f'{msg = }')
+        if not self._first_item_spoken:
+            msg ='Window: PyRadio configuration. ' + msg
+            msg = msg + '. Note: press {} on a setting to hear a description'.format(to_str('tts_help'))
+            self._first_item_spoken = True
         self.tts().queue_speech(msg, Priority.NAVIGATION, Context.LIMITED, self.op_mode())
 
     def _speak_port_changed(self):
@@ -918,6 +922,13 @@ class PyRadioConfigWindow():
         self._save_parameters_function()
         return True
 
+    def reset_old_selection(self):
+        ''' used for TTS, so that when coming back
+            from an opened window it will not say
+            "set to..."
+        '''
+        self.__old_selection = -1
+
     def keypress(self, char):
         ''' PyRadioConfigWindow keypress
             Returns:
@@ -962,6 +973,7 @@ class PyRadioConfigWindow():
                     tts_in_config=lambda: True,
                 )
                 if not self.tmp_tts.available:
+                    self.__old_selection = -1
                     return 1110, []
             if self.tmp_tts.available:
                 self.tmp_tts.queue_speech('This is a sample text (spoken to check your settings)', Priority.NORMAL)
@@ -976,11 +988,12 @@ class PyRadioConfigWindow():
                 for n in self._help_text[self.__selection]
                 if n != '|'
             )
-            self.tts().queue_speech(msg, Priority.NAVIGATION, Context.LIMITED, self.op_mode())
+            self.tts().queue_speech(f'Option help: {msg}', Priority.NAVIGATION, Context.LIMITED, self.op_mode())
             return -1, []
 
         if char == kbkey['gr'] or \
                 check_localized(char, (kbkey['gr'], )):
+            self.__old_selection = -1
             return Window_Stack_Constants.CONFIG_GROUP_MODE, [self._it_list[x][0] for x in self._headers]
 
         if char in self._local_functions or \
@@ -1026,11 +1039,13 @@ class PyRadioConfigWindow():
 
         elif val[0] == 'resource_opener':
             if SYSTEM not in ('Win', 'Mac'):
+                self.__old_selection = -1
                 return Window_Stack_Constants.INSERT_RESOURCE_OPENER, []
             return -1, []
 
         elif val[0] == 'recording_dir':
             if self._is_recording() > 0:
+                self.__old_selection = -1
                 return 5, []
             client = PyRadioClient(
                     server_file=path.join(
@@ -1048,6 +1063,7 @@ class PyRadioConfigWindow():
             '''
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug(f'headless client returned: {ret}')
+            self.__old_selection = -1
             if ret == 1:
                 return 6, [client.server_ip + ':' + client.server_port]
             if ret < 0:
@@ -1094,18 +1110,21 @@ class PyRadioConfigWindow():
             if char in (curses.KEY_RIGHT, kbkey['l'], kbkey['pause'],
                         curses.KEY_ENTER, ord('\r'), ord('\n')) or \
                     check_localized(char, (kbkey['l'], kbkey['pause'])):
+                self.__old_selection = -1
                 return Window_Stack_Constants.RADIO_BROWSER_CONFIG_MODE, []
 
         elif val[0] == 'shortcuts_keys':
             if char in (curses.KEY_RIGHT, kbkey['l'], kbkey['pause'],
                         curses.KEY_ENTER, ord('\r'), ord('\n')) or \
                     check_localized(char, (kbkey['l'], kbkey['pause'])):
+                self.__old_selection = -1
                 return Window_Stack_Constants.KEYBOARD_CONFIG_MODE, []
 
         elif val[0] == 'localized_keys':
             if char in (curses.KEY_RIGHT, kbkey['l'], kbkey['pause'],
                         curses.KEY_ENTER, ord('\r'), ord('\n')) or \
                     check_localized(char, (kbkey['l'], kbkey['pause'])):
+                self.__old_selection = -1
                 return Window_Stack_Constants.LOCALIZED_CONFIG_MODE, []
 
         elif val[0] == 'remote_control_server_port':
@@ -1504,9 +1523,11 @@ class PyRadioConfigWindow():
             sel = vals[self.selection][0]
 
             if sel == 'player':
+                self.__old_selection = -1
                 return Window_Stack_Constants.SELECT_PLAYER_MODE, []
 
             if sel == 'default_encoding':
+                self.__old_selection = -1
                 return Window_Stack_Constants.SELECT_ENCODING_MODE, []
 
             if sel == 'theme':
@@ -1516,8 +1537,10 @@ class PyRadioConfigWindow():
                         logger.error('DE\n\nshowing theme self._cnf.theme = {}\n\n'.format(self._cnf.theme))
                 self._show_theme_selector_function()
             elif sel == 'default_playlist':
+                self.__old_selection = -1
                 return Window_Stack_Constants.SELECT_PLAYLIST_MODE, []
             elif sel == 'default_station':
+                self.__old_selection = -1
                 return Window_Stack_Constants.SELECT_STATION_MODE, []
             elif sel in (
                 'confirm_station_deletion',

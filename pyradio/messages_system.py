@@ -904,10 +904,29 @@ Down|, |{k}|, |PgDown                           <*> Change option selection.
 Enter|, |{pause}|, |Right|, |{l}                <*> Change option value.
 {revert_saved}                                  <*> Revert to saved values.
 {search} |/ |{search_next}| / |{search_prev}    <*> Search, go to next / previous result.
-{tts_test}                                      <*> TTS test (in TTS group only).
 {revert_def}                                    <*> Load default values.
 {s}                                             <*> Save config.
 Esc|, |{q}|, |Left|, |{h}                       <*> Cancel.
+%Global functions (with \ on Line editor)
+{v_dn2}|/|{v_up1} or |{v_dn1}|/|{v_up2}         <*> Change volume.
+{mute}| / |{s_vol}                              <*> |M|ute player / Save |v|olume.
+{t_tag}| / |{tag}                               <*> Toggle title log / like a station.'''
+), Priority.HELP),
+
+    'H_CONFIG_TTS': ('Configuration Help',
+kb2str(r'''Up|, |{j}|, |PgUp|,                  <*>
+Down|, |{k}|, |PgDown                           <*> Change option selection.
+{g}|, |Home| / |{G}|, |End                      <*> Jump to first / last option.
+{gr}                                            <*> Open the |Group Selection| window.
+Enter|, |{pause}|, |Right|, |{l}                <*> Change option value.
+{revert_saved}                                  <*> Revert to saved values.
+{search} |/ |{search_next}| / |{search_prev}    <*> Search, go to next / previous result.
+{revert_def}                                    <*> Load default values.
+{s}                                             <*> Save config.
+Esc|, |{q}|, |Left|, |{h}                       <*> Cancel.
+%TTS Keys
+{tts_help}                                      <*> Listen to the "|Option Help|" text.
+{tts_test}                                      <*> TTS test (in TTS group only).
 %Global functions (with \ on Line editor)
 {v_dn2}|/|{v_up1} or |{v_dn1}|/|{v_up2}         <*> Change volume.
 {mute}| / |{s_vol}                              <*> |M|ute player / Save |v|olume.
