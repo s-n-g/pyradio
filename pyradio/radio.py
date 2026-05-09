@@ -6118,6 +6118,7 @@ and |remove the file manually|.
                 color_cursor_selection=curses.color_pair(6),
                 color_cursor_active=curses.color_pair(9),
                 global_functions=self._global_functions,
+                speak=self._speak_window if self._enable_tts and self._cnf.tts_context != 'limited' else None,
             )
             self._station_profile_editor.show()
         else:
@@ -8223,7 +8224,8 @@ _____"|f|" to see the |free| keys you can use.
                     self._buffering_win = PyRadioBuffering(
                             self.stations[self.selection][Station.buffering],
                             parent=self.outerBodyWin,
-                            global_functions=self._global_functions
+                            global_functions=self._global_functions,
+                            speak=self._speak_window if self._enable_tts and self._cnf.tts_context != 'limited' else None,
                             )
                     self.ws.operation_mode = self.ws.BUFFER_SET_MODE
                     self._buffering_win.show()
@@ -8491,6 +8493,7 @@ _____"|f|" to see the |free| keys you can use.
                     self.ws.RENAME_PLAYLIST_MODE, self.ws.CREATE_PLAYLIST_MODE,
                     self.ws.SELECT_STATION_ENCODING_MODE,
                     self.ws.SELECT_ENCODING_MODE,
+                    self.ws.BUFFER_SET_MODE,
                     self.ws.EDIT_STATION_ENCODING_MODE) and \
                 self.ws.operation_mode not in self.ws.PASSIVE_WINDOWS and \
                 not self.is_search_mode(self.ws.operation_mode) and \

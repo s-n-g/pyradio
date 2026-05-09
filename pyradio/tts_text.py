@@ -79,6 +79,13 @@ TTS_WINDOWS_TEXT = {
         lambda it: f'''Window: Theme Selection.
             Current item: {it}
         ''',
+    Window_Stack_Constants.EDIT_PROFILE_MODE:
+        lambda it: f'''Window: Profiles.
+            Current item: {it}
+        ''',
+    Window_Stack_Constants.BUFFER_SET_MODE:
+        lambda num: f'Window: Station buffering. Current value: {num}. ' +
+            kb2str('Note: press {tts_help} to hear the help screen'),
 }
 
 def describe_single_key(key_string):

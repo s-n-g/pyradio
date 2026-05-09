@@ -2977,10 +2977,13 @@ class PyRadioBuffering():
     def __init__(self,
                  buffering,
                  parent,
+                 speak=None,
                  global_functions=None):
+        self._first_item_spoken = False
         self.maxX = 0
         self._win = None
         self._cache_data  = None
+        self._speak = speak
         logger.error(f'\n\nbuffering = {buffering}\n\n')
         self._buffering = buffering
         if '@' in buffering:
@@ -3015,6 +3018,13 @@ class PyRadioBuffering():
             self._bitrate_manager = BitrateManager(value)
         else:
             self._bitrate_manager.bitrate = value
+
+    def _speak_item(self, msg=None, first=None):
+        if self._speak:
+            if first is True:
+                self._speak(args=(self.buffering_value, ), navigation=True)
+            if msg is not None:
+                self._speak(msg=msg, navigation=True)
 
     def save(self):
         self._cache_data._save()
@@ -3066,6 +3076,9 @@ class PyRadioBuffering():
             self._win.addstr(10, 2, kb2str('Esc {q} {h} Right'), curses.color_pair(11))
             self._win.addstr('   Cancel operation', curses.color_pair(10))
         self._win.refresh()
+        if not self._first_item_spoken:
+            self._speak_item(first=True)
+            self._first_item_spoken = True
 
     def keypress(self, char):
         """ PyRadioBuffering keypress
@@ -3080,16 +3093,29 @@ class PyRadioBuffering():
             if l_char is None:
                 l_char = char
             self._global_functions[l_char]()
+            return 0, None
 
-        elif char in (curses.KEY_ENTER, ord('\n'), ord('\r'), kbkey['s']) or \
+        if char in (curses.KEY_ENTER, ord('\n'), ord('\r'), kbkey['s']) or \
                 check_localized(char, (kbkey['s'], )):
+            self._speak_item(msg='value saved')
             return 1, self.buffering_value + '@' + self.bitrate_value
 
-        elif char in (curses.KEY_EXIT, 27, kbkey['q'], kbkey['h'], curses.KEY_LEFT) or \
+        if char in (curses.KEY_EXIT, 27, kbkey['q'], kbkey['h'], curses.KEY_LEFT) or \
                 check_localized(char, (kbkey['q'], kbkey['h'])):
             return -1, None
 
-        elif char in (kbkey['j'], curses.KEY_UP,
+        if char == kbkey['t'] or check_localized(char, (kbkey['t'], )):
+            if self._speak:
+                msg = kb2str('''Help:
+                            {j}, {k}, Up, Down, PgUp PgDown: Adjust value.
+                            {revert_saved}: Load saved value.
+                            {no_buffer}: No buffering.
+                            Enter, {s}: Accept value.
+                            Esc {q} {h} Right: Cancel operation.''')
+                self._speak_item(msg=msg)
+            return 0, None
+
+        if char in (kbkey['j'], curses.KEY_UP,
                       kbkey['k'], curses.KEY_DOWN,
                       curses.KEY_NPAGE, curses.KEY_PPAGE,
                       kbkey['no_buffer'], kbkey['revert_saved']
@@ -3124,6 +3150,7 @@ class PyRadioBuffering():
             elif char == kbkey['no_buffer'] or \
                     check_localized(char, (kbkey['no_buffer'], )):
                 self.buffering_value = '0'
+            self._speak_item(msg=f'set to {self.buffering_value}')
 
             self._win.addstr(2, len(self._text) + 4, f'{self.buffering_value:<7}', curses.color_pair(11))
             self._win.refresh()
