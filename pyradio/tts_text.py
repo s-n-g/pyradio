@@ -84,8 +84,14 @@ TTS_WINDOWS_TEXT = {
             Current item: {it}
         ''',
     Window_Stack_Constants.BUFFER_SET_MODE:
-        lambda num: f'Window: Station buffering. Current value: {num}. ' +
+        lambda num: f'Window: Station buffering (in seconds). Current value: {num}. ' +
             kb2str('Note: press {tts_help} to hear the help screen'),
+    Window_Stack_Constants.RENAME_PLAYLIST_MODE:
+        lambda pl: f'Window: Rename playlist. Current playlist name: {pl}. ' +
+            kb2str('Note: press {tts_help} to hear the help screen when not in the line editor'),
+    Window_Stack_Constants.CREATE_PLAYLIST_MODE:
+        lambda: f'Window: Create playlist. Please type the name of the playlist. ' +
+            kb2str('Note: press {tts_help} to hear the help screen when not in the line editor'),
 }
 
 def describe_single_key(key_string):

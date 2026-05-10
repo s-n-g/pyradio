@@ -2412,7 +2412,9 @@ class PyRadioRenameFile():
     def __init__(self, filename, parent, create=False,
                  open_afterwards=True, title='',
                  opened_from_editor=False,
+                 speak=None,
                  global_functions=None):
+        self._speak = speak
         self._h_buttons = None
         self.new_file_name = None
         self._invalid_chars = '<>|:"\\/?*'
@@ -2453,6 +2455,7 @@ class PyRadioRenameFile():
         self._global_functions = global_functions
         if self._global_functions is None:
             self._global_functions = {}
+        self._first_item_spoken = False
 
     def __del__(self):
         try:
@@ -2503,6 +2506,18 @@ class PyRadioRenameFile():
         if refresh:
             self.show()
 
+    def _get_tts_focus_text(self):
+        if self.focus == 0:
+            return f'line editor, the text is {self._widgets[0].string}' if self._widgets[0].string else 'line editor: no text'
+        if self.focus == 1:
+                return 'checked' if self._widgets[1].checked else 'unchecked' + ' check box: Copy playlist instead of renaming it'
+        if self.focus == 2:
+                return 'checked' if self._widgets[2].checked else 'unchecked' + ' check box: Open playlist for editing afterwards'
+        if self.focus == 3:
+                return 'button: OK'
+        if self.focus == 4:
+                return 'button: cancel'
+
     def _string_changed(self):
         self._error_string = ''
         first_char = ''
@@ -2515,7 +2530,7 @@ class PyRadioRenameFile():
             if stripped_string:
                 check_file = path.join(self._to_path, stripped_string + '.csv')
                 if check_file == self.filename:
-                    if self._create:
+                    if self._create or self._speak:
                         self._error_string = 'File already exists!!!'
                     else:
                         self._error_string = 'You must be joking!!!'
@@ -2537,6 +2552,8 @@ class PyRadioRenameFile():
         if stripped_string and self._error_string == '':
             self._widgets[-2].enabled = True
         self.show()
+        if self._speak and self._error_string:
+            self._speak_item(msg=f'Error: {self._error_string}')
 
     def show(self):
         parent_maxY, parent_maxX = self._parent_win.getmaxyx()
@@ -2668,12 +2685,6 @@ class PyRadioRenameFile():
                 curses.color_pair(5)
                 )
             self._win.addstr(2, 2, 'To:', curses.color_pair(4))
-        inv_tit = 'Invalid chars: '
-        inv_chars = self._invalid_chars
-        invX = self.maxX - len(inv_tit) - len(inv_chars) - 2
-        y = 4 if adjust_line_Y == 0 else 3
-        self._win.addstr(y, invX, inv_tit, curses.color_pair(4))
-        self._win.addstr(inv_chars, curses.color_pair(5))
 
         if self.maxY > 18 + adjust_line_Y and self.maxX > 76:
             try:
@@ -2743,7 +2754,7 @@ class PyRadioRenameFile():
                 self._win.addstr(22 + adjust_line_Y, 5, kb2chr('transp'), curses.color_pair(4))
                 self._win.addstr(22 + adjust_line_Y, 23, 'Toggle transparency', curses.color_pair(5))
 
-        self._win.refresh()
+        # self._win.refresh()
         self._update_focus()
         if not self._too_small:
             self._line_editor.show(self._win, opening=False)
@@ -2753,6 +2764,18 @@ class PyRadioRenameFile():
                 self._widgets[2].show()
             self._widgets[3].show()
             self._widgets[4].show()
+        inv_tit = 'Invalid chars: '
+        inv_chars = self._invalid_chars
+        invX = self.maxX - len(inv_tit) - len(inv_chars) - 2
+        y = 4 if adjust_line_Y == 0 else 3
+        if self._create:
+            y += 1
+        self._win.addstr(y, invX, inv_tit, curses.color_pair(4))
+        self._win.addstr(inv_chars, curses.color_pair(5))
+        self._win.refresh()
+        if not self._first_item_spoken:
+            self._speak_item(first=True)
+            self._first_item_spoken = True
 
     def _show_title(self, a_title=''):
         if a_title:
@@ -2790,6 +2813,8 @@ class PyRadioRenameFile():
                 # logger.error('nn+ focus = {}'.format(focus))
             self.focus = focus
         # logger.error('nn o self.focus = {}'.format(self.focus))
+        if self._speak:
+            self._speak_item(msg=self._get_tts_focus_text())
 
     def _focus_previous(self):
         # logger.error('pp i self.focus = {}'.format(self.focus))
@@ -2805,6 +2830,8 @@ class PyRadioRenameFile():
                 # logger.error('pp+ focus = {}'.format(focus))
             self.focus = focus
         # logger.error('pp o self.focus = {}'.format(self.focus))
+        if self._speak:
+            self._speak_item(msg=self._get_tts_focus_text())
 
     def _act_on_file(self):
         """Rename the playlist (if self._create is False)
@@ -2861,6 +2888,16 @@ class PyRadioRenameFile():
                     )
         return result
 
+    def _speak_item(self, msg=None, first=None):
+        if self._speak:
+            if first is True:
+                if self._create:
+                    self._speak(navigation=True)
+                else:
+                    self._speak(args=(self._from_file, ), navigation=True)
+            if msg is not None:
+                self._speak(msg=msg, navigation=True)
+
     def keypress(self, char):
         """ PyRadioRenameFile keypress
             Returns:
@@ -2875,6 +2912,22 @@ class PyRadioRenameFile():
             if char in (curses.KEY_EXIT, 27, kbkey['q']) or \
                     check_localized(char, (kbkey['q'], )):
                 return -1, '', '', False, False, False
+            return 0, '', '', False, False, False
+
+        if self.focus > 0 and (char == kbkey['tts_help'] or check_localized(char, (kbkey['tts_help'], ))):
+            if self._speak:
+                msg = kb2str('''Window Help.
+Please do not use any puntuation marks or white space in the playlist name.
+Dash and underscore are allowed though.
+Available keys:
+Tab, Down, Up: Go to next / previous field.
+Enter: When in Line Editor, go to next field. Otherwise, execute selected function.
+{pause}, {l}, Left: Toggle check box state.
+Esc: Cancel operation.
+{s}: Exeute the (not in Line Editor).
+{q}: Cancel operation (not in Line Editor).
+{?}: Show Line editor help (in Line Editor).''')
+            self._speak_item(msg=msg)
             return 0, '', '', False, False, False
 
         # logger.error('self.focus = {}'.format(self.focus))
@@ -2892,6 +2945,9 @@ class PyRadioRenameFile():
             if self._focus == 1 and self._opened_from_editor:
                 self._widgets[2].enabled = self._widgets[1].checked
             # logger.error('len widgets = {}'.format(len(self._widgets)))
+            if self.focus in (1, 2):
+                tok = 'checked' if self._widgets[self.focus].checked else 'unchecked'
+                self._speak_item(msg=f'set to {tok}')
         elif char in (ord('\t'), 9, curses.KEY_DOWN):
             # EDIT: fixed for H, L
             self._focus_next()
@@ -3035,7 +3091,7 @@ class PyRadioBuffering():
         y, x = self._parent.getmaxyx()
         new_y = int((y - self._max_lines) / 2) + 1
         new_x = int((x - len(self._text) - 9 - 4) / 2)
-        self.maxX = len(self._text) + 9 + 4
+        self.maxX = len(self._text) + 9 + 4 + 2
         self._win = None
         if y < self._max_lines + 2 or x < self.maxX + 2:
             self._win = curses.newwin(3, 20, int((y-2)/2), int((x - 20) / 2))
@@ -3043,6 +3099,7 @@ class PyRadioBuffering():
             self._win.erase()
             self._win.box()
             self._win.addstr(1, 2, 'Window too small', curses.color_pair(10))
+            self._speak_item(msg='Window too small')
         else:
 
             self._win = curses.newwin(self._max_lines, self.maxX, new_y, new_x)
@@ -3055,7 +3112,7 @@ class PyRadioBuffering():
             self._win.addstr(0, x, self._title, curses.color_pair(11))
 
             # show content
-            self._win.addstr(2, 4, self._text, curses.color_pair(10))
+            self._win.addstr(2, 6, self._text, curses.color_pair(10))
             self._win.addstr(f'{self.buffering_value}', curses.color_pair(11))
 
             # show help
@@ -3070,7 +3127,7 @@ class PyRadioBuffering():
             self._win.addstr(7, 2, kb2chr('revert_saved'), curses.color_pair(11))
             self._win.addstr('               Load saved value', curses.color_pair(10))
             self._win.addstr(8, 2, kb2chr('no_buffer'), curses.color_pair(11))
-            self._win.addstr('               No buffering', curses.color_pair(10))
+            self._win.addstr('               Turn buffering off', curses.color_pair(10))
             self._win.addstr(9, 2, 'Enter ' + kb2chr('s'), curses.color_pair(11))
             self._win.addstr('         Accept value', curses.color_pair(10))
             self._win.addstr(10, 2, kb2str('Esc {q} {h} Right'), curses.color_pair(11))
@@ -3109,9 +3166,9 @@ class PyRadioBuffering():
                 msg = kb2str('''Help:
                             {j}, {k}, Up, Down, PgUp PgDown: Adjust value.
                             {revert_saved}: Load saved value.
-                            {no_buffer}: No buffering.
+                            {no_buffer}: Turn buffering off.
                             Enter, {s}: Accept value.
-                            Esc {q} {h} Right: Cancel operation.''')
+                            Esc, {q}, {h} Right: Cancel operation.''')
                 self._speak_item(msg=msg)
             return 0, None
 

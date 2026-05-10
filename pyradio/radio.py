@@ -7255,15 +7255,16 @@ and |remove the file manually|.
             )
 
     def _speak_selection(self):
-        if self._enable_tts and \
-                self.ws.operation_mode in (self.ws.NORMAL_MODE, self.ws.PLAYLIST_MODE):
-            self.tts.queue_speech(
-                f'{self.selection+1}. {self.stations[self.selection][0]}',
-                Priority.NORMAL,
-                mode=self.ws.operation_mode
-            )
-        # else:
-        #     logger.error('not speaking')
+        if self.stations:
+            if self._enable_tts and \
+                    self.ws.operation_mode in (self.ws.NORMAL_MODE, self.ws.PLAYLIST_MODE):
+                self.tts.queue_speech(
+                    f'{self.selection+1}. {self.stations[self.selection][0]}',
+                    Priority.NORMAL,
+                    mode=self.ws.operation_mode
+                )
+            # else:
+            #     logger.error('not speaking')
 
     def _open_selected_playlist_or_register(self):
         if self._cnf.open_register_list:
@@ -8062,6 +8063,7 @@ _____"|f|" to see the |free| keys you can use.
                         self.outerBodyWin,
                         opened_from_editor=self.ws.operation_mode == self.ws.NORMAL_MODE,
                         global_functions=self._global_functions,
+                        speak=self._speak_window if self._enable_tts and self._cnf.tts_context != 'limited' else None,
                     )
                     if self.ws.operation_mode == self.ws.NORMAL_MODE:
                         #self._rename_playlist_dialog.checked_checkbox = (False, False)
@@ -8069,8 +8071,8 @@ _____"|f|" to see the |free| keys you can use.
                             self._rename_playlist_dialog.title = ' Rename Register '
                     elif self._cnf._open_register_list and self.ws.operation_mode == self.ws.PLAYLIST_MODE:
                         self._rename_playlist_dialog.title = ' Rename Register '
-                    self._rename_playlist_dialog.show()
                     self.ws.operation_mode = self.ws.RENAME_PLAYLIST_MODE
+                    self._rename_playlist_dialog.show()
 
             elif char == kbkey['new_playlist'] or \
                     check_localized(char, (kbkey['new_playlist'],)):
@@ -8083,16 +8085,17 @@ _____"|f|" to see the |free| keys you can use.
                         self._cnf.open_register_list):
                     ''' do not create playlist from registers list '''
                     self._update_status_bar_right(status_suffix='')
+                    self.ws.operation_mode = self.ws.CREATE_PLAYLIST_MODE
                     self._rename_playlist_dialog = PyRadioRenameFile(
                         self._cnf.station_path,
                         self.outerBodyWin,
                         opened_from_editor=False,
                         global_functions=self._global_functions,
-                        create=True
+                        create=True,
+                        speak=self._speak_window if self._enable_tts and self._cnf.tts_context != 'limited' else None,
                     )
                     self._rename_playlist_dialog.title = ' Create Playlist '
                     self._rename_playlist_dialog.show()
-                    self.ws.operation_mode = self.ws.CREATE_PLAYLIST_MODE
 
             elif char == kbkey['last_playlist'] or \
                     check_localized(char, (kbkey['last_playlist'],)):
@@ -9226,10 +9229,10 @@ _____"|f|" to see the |free| keys you can use.
             return
 
         elif self.ws.operation_mode in (self.ws.RENAME_PLAYLIST_MODE, self.ws.CREATE_PLAYLIST_MODE):
-            logger.error(f'\n\nchar = {char}\n\n')
             '''  Rename playlist '''
             # keypress ok
             ret, self.old_filename, self.new_filename, copy, open_file, pl_create = self._rename_playlist_dialog.keypress(char)
+            create = self._rename_playlist_dialog.create
             logger.error(f'{ret = }')
             # logger.error('DE\n\n **** ps.p {}\n\n'.format(self._cnf._ps._p))
             if ret not in (0, 2):
@@ -9262,6 +9265,15 @@ _____"|f|" to see the |free| keys you can use.
                 # logger.error('DE last_history = {}'.format(last_history))
                 if self.ws.window_mode == self.ws.NORMAL_MODE:
                     ''' rename the playlist on editor '''
+                    if self._enable_tts:
+                        msg = 'Playlist'
+                        if create:
+                            msg += ' created'
+                        else:
+                            msg += ' renamed'
+                        if open_file:
+                            msg += ' and opened in the editor'
+                        self._speak_high(msg)
                     self._rename_playlist_from_normal_mode(
                             copy,
                             open_file,
@@ -9273,6 +9285,11 @@ _____"|f|" to see the |free| keys you can use.
                     #self._playlist_in_editor = self._cnf.playlists[self.selections[self.ws.PLAYLIST_MODE][2]][-1]
                     self._reload_playlists(refresh=False)
                     if self._cnf.open_register_list:
+                        if self._enable_tts:
+                            msg = 'Register renamed'
+                            if open_file:
+                                msg += ' and opened in the editor'
+                            self._speak_high(msg)
                         self._rename_playlist_from_register_mode(
                             copy,
                             open_file,
@@ -9280,6 +9297,15 @@ _____"|f|" to see the |free| keys you can use.
                         )
                     else:
                         ''' fix playlist selection '''
+                        if self._enable_tts:
+                            msg = 'Playlist'
+                            if create:
+                                msg += ' created'
+                            else:
+                                msg += ' renamed'
+                            if open_file:
+                                msg += ' and opened in the editor'
+                            self._speak_high(msg)
                         self._rename_playlist_from_playlist_mode(
                             copy,
                             open_file,
