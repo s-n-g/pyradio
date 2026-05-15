@@ -564,6 +564,7 @@ class PyRadioEditor():
                  parent,
                  config_encoding,
                  available_players,
+                 speak=None,
                  global_functions=None,
                  adding=True):
         self._stations = []
@@ -571,6 +572,9 @@ class PyRadioEditor():
         self._pos_to_insert = 0
         self.maxY = 0
         self.maxX = 0
+
+        self._speak = speak
+        self._first_item_spoken = False
 
         self._win = None
         self._parent_win = None
@@ -983,6 +987,48 @@ class PyRadioEditor():
                         self._win.addstr('for a ', curses.color_pair(5))
                         self._win.addstr('Group Header', curses.color_pair(4))
             self._win.refresh()
+            if not self._first_item_spoken and self._speak:
+                self._first_item_spoken = True
+                self._speak_item(first=True)
+
+    def _speak_focus_changed(self):
+        if self._focus != self._old_focus:
+            if self._focus < 4:
+                headers = ('Station name', 'URL', 'Icon', 'Referrer')
+                # line editor
+                msg = f'line editor: {headers[self._focus]}, '
+                msg += f'text is {self._line_editor[self._focus].string}' if self._line_editor[self._focus].string.strip() else 'no text'
+                # logger.error(f'speak line editor focus {self._focus}: "{msg}"')
+            else:
+                msg = ''
+                if self._focus == 4:
+                    msg = f'volume, value is {self._volume}'
+                elif self._focus == 5:
+                    msg = f'buffering, value is {self._buff}'
+                elif self._focus == 6:
+                    disp_encoding = 'Default' if self._encoding == self._config_encoding else self._encoding
+                    msg = f'encoding, value is {disp_encoding}'
+                elif self._focus == 7:
+                    msg = f'force http, value is {self._http}'
+                elif self._focus == 8:
+                    disp_player = self._player if self._player else 'default'
+                    msg = f'player, value is {disp_player}'
+                elif self._focus == 9:
+                    disp_profile = self._profile if self._profile else 'Default'
+                    msg = f'profile, value is {disp_profile}'
+                elif self._focus == 10:
+                    msg = 'button, OK'
+                else:
+                    msg = 'button, cancel'
+                # logger.error(f'speak focus {self._focus}: "{msg}"')
+            self._speak_item(msg=msg)
+
+    def _speak_item(self, msg=None, first=None):
+        if self._speak:
+            if first is True:
+                self._speak(args=(self._line_editor[0].string, ), navigation=True)
+            if msg is not None:
+                self._speak(msg=msg, navigation=True)
 
     def _show_alternative_modes(self):
         disp = 0
@@ -990,20 +1036,20 @@ class PyRadioEditor():
             if n.paste_mode:
                 disp = 100
                 break
-        strings = ('Paste mode', 'Extra mode')
-        max_len = max(cjklen(x)+2 for x in strings)
+        d_strings = ('Paste mode', 'Extra mode')
+        max_len = max(cjklen(x)+2 for x in d_strings)
         # logger.error(f'{disp = }')
         if disp == 100:
             """ print paste mode is on on all editors """
             """ set all editors' paste mode """
-            string = strings[0]
+            string = d_strings[0]
             # reset tip lines
             self._win.addstr(12, 1, (self.maxX -2) * ' ', curses.color_pair(5))
         else:
             string = max_len * ' '
             for n in self._line_editor:
                 if n.backslash_pressed:
-                    string = strings[1]
+                    string = d_strings[1]
                     break
         # logger.error(f'{string = }')
         x = self.maxX - 2 - max_len
@@ -1019,6 +1065,8 @@ class PyRadioEditor():
             self._win.addstr(y, x, '[', curses.color_pair(5))
             self._win.addstr(string, curses.color_pair(12))
             self._win.addstr(']', curses.color_pair(5))
+            if string == d_strings[0]:
+                self._speak_item(msg='Paste mode enabled')
         self._win.refresh()
 
     def _show_extra_fields(self):
@@ -1052,9 +1100,7 @@ class PyRadioEditor():
             disp_player = self._player if self._player else 'default'
             self._win.addstr(' ' + f'{disp_player:<7}' + ' ', curses.color_pair(col[4]))
             self._win.addstr('    Profile:', curses.color_pair(4))
-            disp_profile = self._profile
-            if disp_profile == '':
-                disp_profile = 'Default'
+            disp_profile = self._profile if self._profile else 'Default'
             self._win.addstr(' ' + disp_profile + ' ', curses.color_pair(col[5]))
             # delete to end of line
             y, x = self._win.getyx()
@@ -1250,6 +1296,7 @@ class PyRadioEditor():
         self._player = self._players[self._player_id]
         self._show_extra_fields()
         self._win.refresh()
+        self._speak_item(msg=f'set to {self._player}')
 
     def _get_previous_player(self):
         self._player_id -= 1
@@ -1258,6 +1305,7 @@ class PyRadioEditor():
         self._player = self._players[self._player_id]
         self._show_extra_fields()
         self._win.refresh()
+        self._speak_item(msg=f'set to {self._player}')
 
     def keypress(self, char):
         """ PyRadioEditor keypress
@@ -1283,7 +1331,30 @@ class PyRadioEditor():
                 self.new_station = None
                 self._reset_editors_modes()
                 ret = -1
+                self._speak_item(msg='window too small')
         else:
+            if self._focus > 3 and (
+                    char == kbkey['tts_help'] or check_localized(char, (kbkey['tts_help'], ))
+            ):
+                msg = kb2str('''Available keys. Tab, Up, Down, Go to next / previous field.
+Enter , When in Line Editor, go to next field. Otherwise, execute selected function.
+{revert_saved}, control r, Revert to saved values (control r in Line Editor).
+Esc, Cancel.
+{s} / {q}, Save data / Cancel operation (not in Line Editor).
+{?}, Line editor help (in Line Editor).
+''')
+                self._speak_item(msg=msg)
+                return 0
+            if (char in (ord(' '), kbkey['l'], kbkey['h'], curses.KEY_LEFT, curses.KEY_RIGHT) or
+                    check_localized(char, (kbkey['l'], kbkey['h']))) and \
+                    self._focus == 6:
+                # encoding
+                return 3
+            if (char in (ord(' '), kbkey['l'], kbkey['h'], curses.KEY_LEFT, curses.KEY_RIGHT) or
+                    check_localized(char, (kbkey['l'], kbkey['h']))) and \
+                    self._focus == 9:
+                # profile
+                return 5
             if (char in (curses.KEY_EXIT, 27, kbkey['q']) or \
                     check_localized(char, (kbkey['q'], ))) and \
                     self.focus > 3:
@@ -1309,11 +1380,6 @@ class PyRadioEditor():
             ):
                 self.focus -= 1
                 self._reset_editors_escape_mode()
-            elif (char in (ord(' '), kbkey['l'], kbkey['h'], curses.KEY_LEFT, curses.KEY_RIGHT) or
-                    check_localized(char, (kbkey['l'], kbkey['h']))) and \
-                    self._focus == 6:
-                # encoding
-                return 3
             elif char in (ord(' '), ord('\n'), ord('\r')) and \
                     self._focus == 8:
                 # next player
@@ -1328,11 +1394,6 @@ class PyRadioEditor():
                     self._focus == 8:
                 # previous player
                 self._get_previous_player()
-            elif (char in (ord(' '), kbkey['l'], kbkey['h'], curses.KEY_LEFT, curses.KEY_RIGHT) or
-                    check_localized(char, (kbkey['l'], kbkey['h']))) and \
-                    self._focus == 9:
-                # profile
-                return 5
             elif char in (curses.KEY_ENTER, ord('\n'), ord('\r')) \
                     and self._focus != 9:
                 if self._focus == 0:
@@ -1428,6 +1489,7 @@ class PyRadioEditor():
                 logger.error(f'setting {self._volume = }')
                 self._show_extra_fields()
                 self._win.refresh()
+                self._speak_item(msg=f'set to {self._volume}')
             elif self._focus == 5 and \
                     (char in (kbkey['h'], kbkey['l'], curses.KEY_RIGHT,
                              curses.KEY_LEFT, curses.KEY_NPAGE,
@@ -1438,6 +1500,7 @@ class PyRadioEditor():
                 logger.error(f'setting {self._buff = }')
                 self._show_extra_fields()
                 self._win.refresh()
+                self._speak_item(f'set to {self._buff}')
             elif self._focus == 7 and \
                     (char in (kbkey['h'], kbkey['l'], curses.KEY_RIGHT,
                              curses.KEY_LEFT, ord(' ')) or \
@@ -1449,6 +1512,7 @@ class PyRadioEditor():
                     self._http = 'True '
                 self._show_extra_fields()
                 self._win.refresh()
+                self._speak_item(msg=f'set to {self._http}')
             elif self._focus == 8 and \
                     char in (curses.KEY_ENTER, ord('\n'), ord('\r'), ord(' ')):
                 pass
@@ -1462,11 +1526,11 @@ class PyRadioEditor():
                     l_char = char
                 self._global_functions[l_char]()
 
-        # logger.error(f'setting {self._focus = }')
         if self._focus > 3:
             self._reset_editors_modes()
         self._show_title()
         self._show_alternative_modes()
+        self._speak_focus_changed()
         return ret
 
     def _get_number(self, char, value, reset_value, min_value, max_value):

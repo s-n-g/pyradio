@@ -92,6 +92,14 @@ TTS_WINDOWS_TEXT = {
     Window_Stack_Constants.CREATE_PLAYLIST_MODE:
         lambda: f'Window: Create playlist. Please type the name of the playlist. ' +
             kb2str('Note: press {tts_help} to hear the help screen when not in the line editor'),
+    Window_Stack_Constants.ADD_STATION_MODE:
+        lambda station: 'Window: add station. Current item: line editor, station name. ' +
+            kb2str('Note 1: press {tts_help} to hear the help screen when not in the line editor. '
+                'Note 2: press slash {paste} to enter paste mode.'),
+    Window_Stack_Constants.EDIT_STATION_MODE:
+        lambda station: f'Window: edit station. Current item: line editor, station name. {station}. ' +
+            kb2str('Note 1: press {tts_help} to hear the help screen when not in the line editor. '
+                'Note 2: press slash {paste} to enter paste mode.'),
 }
 
 def describe_single_key(key_string):

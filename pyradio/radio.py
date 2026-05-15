@@ -9272,7 +9272,7 @@ _____"|f|" to see the |free| keys you can use.
                         else:
                             msg += ' renamed'
                         if open_file:
-                            msg += ' and opened in the editor'
+                            msg += ' and loaded'
                         self._speak_high(msg)
                     self._rename_playlist_from_normal_mode(
                             copy,
@@ -9288,7 +9288,7 @@ _____"|f|" to see the |free| keys you can use.
                         if self._enable_tts:
                             msg = 'Register renamed'
                             if open_file:
-                                msg += ' and opened in the editor'
+                                msg += ' and loaded'
                             self._speak_high(msg)
                         self._rename_playlist_from_register_mode(
                             copy,
@@ -9304,7 +9304,7 @@ _____"|f|" to see the |free| keys you can use.
                             else:
                                 msg += ' renamed'
                             if open_file:
-                                msg += ' and opened in the editor'
+                                msg += ' and loaded'
                             self._speak_high(msg)
                         self._rename_playlist_from_playlist_mode(
                             copy,
@@ -10944,6 +10944,7 @@ _____"|f|" to see the |free| keys you can use.
                 elif char in (kbkey['add'], kbkey['append']) or \
                         check_localized(char, (kbkey['add'], kbkey['append'])):
                     self._reset_status_bar_right()
+                    self.ws.operation_mode = self.ws.ADD_STATION_MODE
                     if not self._cnf.browsing_station_service:
                         self._station_editor = PyRadioEditor(
                             self.stations,
@@ -10951,13 +10952,13 @@ _____"|f|" to see the |free| keys you can use.
                             self.outerBodyWin,
                             self._cnf.default_encoding,
                             self._cnf.AVAILABLE_PLAYERS,
+                            speak=self._speak_window if self._enable_tts and self._cnf.tts_context != 'limited' else None,
                             global_functions=self._global_functions)
                         if char == kbkey['append'] or \
                                 check_localized(char, (kbkey['append'], )):
                             self._station_editor.append = True
                         self._station_editor.show()
                         self._station_editor.item = ['', '', '', '', '', '0@128', '', '', '', '']
-                        self.ws.operation_mode = self.ws.ADD_STATION_MODE
 
                 elif char == kbkey['paste'] or \
                         check_localized(char, (kbkey['paste'], )):
@@ -11009,6 +11010,7 @@ _____"|f|" to see the |free| keys you can use.
                     self._reset_status_bar_right()
                     if self._cnf.browsing_station_service:
                         return
+                    self.ws.operation_mode = self.ws.EDIT_STATION_MODE
                     self._station_editor = PyRadioEditor(
                         self.stations,
                         self.selection,
@@ -11016,9 +11018,9 @@ _____"|f|" to see the |free| keys you can use.
                         self._cnf.default_encoding,
                         self._cnf.AVAILABLE_PLAYERS,
                         global_functions=self._global_functions,
+                        speak=self._speak_window if self._enable_tts and self._cnf.tts_context != 'limited' else None,
                         adding=False)
                     self._station_editor.show(self.stations[self.selection])
-                    self.ws.operation_mode = self.ws.EDIT_STATION_MODE
 
                 elif char == kbkey['open_config'] or \
                         check_localized(char, (kbkey['open_config'], )):
