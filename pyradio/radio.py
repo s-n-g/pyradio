@@ -4538,6 +4538,9 @@ and |remove the file manually|.
                             pass_first_item_funct=self._show_first_station_history_notification,
                             pass_last_item_funct=self._show_last_station_history_notification
                         )
+                        self._cnf.online_browser.set_tts(
+                            self._speak_window if self._enable_tts and self._cnf.tts_context != 'limited' else None,
+                        )
 
                         if not self._cnf._online_browser.initialize():
                             ''' browser cannot be opened '''
@@ -5223,7 +5226,8 @@ and |remove the file manually|.
                 show_confirm_cancel_config_changes=self._show_confirm_cancel_config_changes,
                 global_functions=self._global_functions,
                 tts=lambda: self.tts,
-                op_mode=lambda: self.ws.operation_mode
+                op_mode=lambda: self.ws.operation_mode,
+                this_operation_mode=self.ws.CONFIG_MODE,
             )
         else:
             self._config_win.parent = self.outerBodyWin
@@ -6184,6 +6188,7 @@ and |remove the file manually|.
                     data_dir=self._cnf.data_dir,
                     distro=distro,
                     global_functions=self._global_functions,
+                    speak=self._speak_window if self._enable_tts and self._cnf.tts_context != 'limited' else None,
                     cannot_delete_function=self._cannot_delete_function
                 )
                 self.ws.close_window()
@@ -8497,6 +8502,7 @@ _____"|f|" to see the |free| keys you can use.
                     self.ws.SELECT_STATION_ENCODING_MODE,
                     self.ws.SELECT_ENCODING_MODE,
                     self.ws.BUFFER_SET_MODE,
+                    self.ws.BROWSER_SEARCH_MODE,
                     self.ws.EDIT_STATION_ENCODING_MODE) and \
                 self.ws.operation_mode not in self.ws.PASSIVE_WINDOWS and \
                 not self.is_search_mode(self.ws.operation_mode) and \
@@ -8748,7 +8754,7 @@ _____"|f|" to see the |free| keys you can use.
 
             elif ret == self.ws.CONFIG_GROUP_MODE:
                 ''' show config groups '''
-                logger.error(f'{ret_list = }')
+                # logger.error(f'{ret_list = }')
                 self.ws.operation_mode = self.ws.CONFIG_GROUP_MODE
                 logger.error(f'{self.ws.operation_mode = }')
                 cur_item = ret_list.index(self._config_win.get_current_header_title())
@@ -9233,7 +9239,6 @@ _____"|f|" to see the |free| keys you can use.
             # keypress ok
             ret, self.old_filename, self.new_filename, copy, open_file, pl_create = self._rename_playlist_dialog.keypress(char)
             create = self._rename_playlist_dialog.create
-            logger.error(f'{ret = }')
             # logger.error('DE\n\n **** ps.p {}\n\n'.format(self._cnf._ps._p))
             if ret not in (0, 2):
                 self._rename_playlist_dialog = None
@@ -9735,7 +9740,7 @@ _____"|f|" to see the |free| keys you can use.
             ''' In Config window; select station '''
             # keypress ok
             ret, ret_station = self._station_select_win.keypress(char)
-            logger.error(f'{ret = }, {ret_station = }')
+            # logger.error(f'{ret = }, {ret_station = }')
             if ret >= 0:
                 if ret == 2:
                     self._open_fuzzy_search()
@@ -11758,7 +11763,7 @@ _____"|f|" to see the |free| keys you can use.
         # logger.error('DE self._playlist_in_editor = {}'.format(self._playlist_in_editor))
         if open_file:
             ret_it, ret_id, rev_ret_id = self._cnf.find_history_by_station_path(self.new_filename)
-            logger.error(f'DE ret_it = {ret_it}, ret_id = {ret_id}, rev_ret_id = {rev_ret_id}')
+            # logger.error(f'DE ret_it = {ret_it}, ret_id = {ret_id}, rev_ret_id = {rev_ret_id}')
             self.ws.close_window()
             if rev_ret_id == 0:
                 ''' return to opened playlist '''

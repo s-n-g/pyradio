@@ -100,6 +100,9 @@ TTS_WINDOWS_TEXT = {
         lambda station: f'Window: edit station. Current item: line editor, station name. {station}. ' +
             kb2str('Note 1: press {tts_help} to hear the help screen when not in the line editor. '
                 'Note 2: press slash {paste} to enter paste mode.'),
+    Window_Stack_Constants.BROWSER_SEARCH_MODE:
+        lambda msg: f'Window: radio browser search. Current item: {msg}. ' +
+            kb2str('Note: press {tts_help} to hear the history navigation help when not in the line editor. '),
 }
 
 def describe_single_key(key_string):
@@ -183,12 +186,12 @@ def describe_single_key(key_string):
         }
 
         if char in special_controls:
-            return f"Control {special_controls[char]}"
+            return f"control {special_controls[char]}"
         if char.isalpha():
-            return f"Control {char.lower()}"
+            return f"control {char.lower()}"
         if char.isdigit():
-            return f"Control {char}"
-        return f"Control {char}"
+            return f"control {char}"
+        return f"control {char}"
 
     # 2. Check for single character
     if len(key_string) == 1:
@@ -328,12 +331,12 @@ def replace_control_keys_in_text(text, verbosity):
     def replace_match(match):
         char = match.group(1)
         if char in special_controls:
-            return f' Control {special_controls[char]} '
+            return f' control {special_controls[char]} '
         if char.isalpha():
-            return f' Control {char.upper()} '
+            return f' control {char.lower()} '
         if char.isdigit():
-            return f' Control {char} '
-        return f' Control {char} '
+            return f' control {char} '
+        return f' control {char} '
 
     return re.sub(pattern, replace_match, text)
 

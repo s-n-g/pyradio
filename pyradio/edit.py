@@ -1486,7 +1486,7 @@ Esc, Cancel.
                     check_localized(char, (kbkey['h'], kbkey['l']))):
                 # handle volume
                 self._volume = self._get_number(char, self._volume, -1, -1, 100)
-                logger.error(f'setting {self._volume = }')
+                # logger.error(f'setting {self._volume = }')
                 self._show_extra_fields()
                 self._win.refresh()
                 self._speak_item(msg=f'set to {self._volume}')
@@ -1497,7 +1497,7 @@ Esc, Cancel.
                     check_localized(char, (kbkey['h'], kbkey['l']))):
                 # handle buffering
                 self._buff = self._get_number(char, self._buff, 0, 5, 60)
-                logger.error(f'setting {self._buff = }')
+                # logger.error(f'setting {self._buff = }')
                 self._show_extra_fields()
                 self._win.refresh()
                 self._speak_item(f'set to {self._buff}')
@@ -3104,7 +3104,7 @@ class PyRadioBuffering():
         self._win = None
         self._cache_data  = None
         self._speak = speak
-        logger.error(f'\n\nbuffering = {buffering}\n\n')
+        # logger.error(f'\n\nbuffering = {buffering}\n\n')
         self._buffering = buffering
         if '@' in buffering:
             self.buffering_value, self.bitrate_value = buffering.split('@')

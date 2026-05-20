@@ -1118,6 +1118,7 @@ class TTSManager:
             return False
         if '%' in text:
             text = text.replace('%', ' percent')
+        text = text.replace('...', '.')
         if priority == Priority.HIGH and ' (error ' in text:
             text = text.split(' (error ')[0]
 

@@ -1615,6 +1615,12 @@ class SimpleCursesWidgetColumns(SimpleCursesWidget):
     def recalculate_columns(self):
         self.set_items()
 
+    def get_item(self):
+        return self.items[self.selection]
+
+    def is_active(self):
+        return self.active == self.selection
+
     def _last_in_row(self, pY, pX):
         # logger.error('DE pY = {0}, pX = {1}'.format(pY, pX))
         test = [x for x in self._coords if x[0] == pY]
@@ -3241,6 +3247,7 @@ class SimpleCursesCheckBox(SimpleCursesWidget):
         self._color_focused = color_focused
         self._color = color
         self._bracket_color = bracket_color
+        self._callback_off_function = None
 
         ''' initialize the window '''
         self.resize()
@@ -3277,6 +3284,16 @@ class SimpleCursesCheckBox(SimpleCursesWidget):
     def highlight_all(self, value):
         self._highlight_all = value
         self.refresh()
+
+    @property
+    def callback_off_function(self):
+        '''The function to call when the widget is unchecked'''
+        return self._callback_off_function
+
+    @callback_off_function.setter
+    def callback_off_function(self, value):
+        self._callback_off_function = value
+
 
     def resize(self):
         '''Resize the widget
@@ -3365,6 +3382,9 @@ class SimpleCursesCheckBox(SimpleCursesWidget):
             if self._checked and \
                     self._callback_function is not None:
                 self._callback_function()
+            if not self._checked and \
+                    self._callback_off_function is not None:
+                self._callback_off_function()
             return False
         return True
 

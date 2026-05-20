@@ -178,7 +178,9 @@ class PyRadioConfigWindow():
             global_functions=None,
             tts=None,
             op_mode=0,
+            this_operation_mode = 0
             ):
+        self._operation_mode = this_operation_mode
         self.tmp_tts = None
         self._first_item_spoken = False
         self._max_start = 0
@@ -347,6 +349,8 @@ class PyRadioConfigWindow():
     def _speak_item(self):
         if not self._can_speak:
             return
+        if self.op_mode() != self._operation_mode:
+            return
         cur_key = self._it_key[self.__selection]
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(f'current key: {cur_key}')
@@ -378,6 +382,8 @@ class PyRadioConfigWindow():
 
     def _speak_port_changed(self):
         if not self._can_speak:
+            return
+        if self.op_mode() != self._operation_mode:
             return
         self.tts().queue_speech(self._port_line_editor.string, Priority.NAVIGATION, Context.LIMITED, self.op_mode())
 

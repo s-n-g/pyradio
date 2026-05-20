@@ -23,7 +23,7 @@ from .cjkwrap import cjklen
 from .countries import countries
 from .simple_curses_widgets import SimpleCursesLineEdit, SimpleCursesHorizontalPushButtons, SimpleCursesWidgetColumns, SimpleCursesCheckBox, SimpleCursesCounter, SimpleCursesBoolean, DisabledWidget, SimpleCursesString, SimpleCursesWidget
 from .ping import ping
-from .keyboard import kbkey, ctrl_code_to_simple_code, kb2chr, ctrl_code_to_string, check_localized, remove_l10n_from_global_functions
+from .keyboard import kbkey, ctrl_code_to_simple_code, kb2chr, kb2str, ctrl_code_to_string, check_localized, remove_l10n_from_global_functions
 locale.setlocale(locale.LC_ALL, '')    # set your locale
 
 logger = logging.getLogger(__name__)
@@ -435,6 +435,9 @@ class RadioBrowser(PyRadioStationsBrowser):
 
     def _get_title(self):
         self.TITLE = 'RadioBrowser ({})'.format(country_from_server(self._server))
+
+    def set_tts(self, speak):
+        self._speak = speak
 
     def set_station_history(self,
                             execute_funct,
@@ -1546,6 +1549,7 @@ class RadioBrowser(PyRadioStationsBrowser):
                 reset_page_function=self._reset_page_counter,
                 limit=self._default_max_number_of_results,
                 init=init,
+                speak=self._speak,
                 global_functions=self._global_functions
             )
         self._search_win.set_search_history(
@@ -1819,7 +1823,8 @@ class RadioBrowserConfigWindow():
             distro='None',
             global_functions=None,
             with_browser=False,
-            cannot_delete_function=None
+            cannot_delete_function=None,
+            speak=None
     ):
         ''' Parameters
                 0: working
@@ -1845,7 +1850,7 @@ class RadioBrowserConfigWindow():
         self.server_window_from_config = False
         self.keyboard_handler = None
         self.enable_servers = True
-
+        self._speak = speak
         self._cannot_delete_function = cannot_delete_function
         if len(self._params) == 0:
             for _ in range(0, 3):
@@ -2535,8 +2540,11 @@ class RadioBrowserSearchWindow():
                  reset_page_function,
                  limit=100,
                  init=False,
+                 speak=None,
                  global_functions=None
                  ):
+        self._speak = speak
+        self._first_item_spoken = False
         self.Y, self.X = (0, 0)
         self._h_buttons = None
 
@@ -2600,6 +2608,105 @@ class RadioBrowserSearchWindow():
             else:
                 self._focus = 0
         self.show()
+
+    def _speak_focus_change(self):
+        if self._speak is None:
+            return
+        labels = (
+            'Display by',
+            'Display by',
+            'Sort by',
+            'Reverse sort order',
+            'Search for',
+            'Name',
+            'Name',
+            'Country',
+            'Country',
+            'Language',
+            'Language',
+            'Tag',
+            'Tag',
+            'State',
+            'State',
+            'Codec',
+            'Codec',
+            'Limit search results to {} items',
+            'button - ok',
+            'button - cancel'
+        )
+        if self.focus in (0, 4):
+            # main check boxes
+            tok = 'checked' if self._widgets[self.focus].checked else 'unchecked'
+            msg = f'{tok} check box, label is {labels[self.focus]}'
+        elif self.focus in (1, 2):
+            # display by / sort by multi-select
+            msg = labels[self.focus] + ' ' + self._widgets[self.focus].get_item()
+            if self._widgets[self.focus].is_active():
+                msg += '. active item'
+        elif self.focus == 3:
+            # reverse odrer
+            tok = 'checked' if self._widgets[self.focus].checked else 'unchecked'
+            msg = f'{tok} check box, label is {labels[self.focus]}'
+        elif self.focus in (5, 7, 9, 11, 13):
+            # exact check boxes
+            tok = 'checked' if self._widgets[self.focus].checked else 'unchecked'
+            msg = f'{tok} check box, label is {labels[self.focus]}, exact'
+        elif self.focus in (6, 8, 10, 12, 14, 16):
+            # line editors
+            msg = f'line editor: {labels[self.focus]}, '
+            if self._widgets[self.focus].string.strip():
+                msg += f'text is {self._widgets[self.focus].string}'
+            else:
+                msg += 'no text'
+        elif self.focus == 17:
+            # limit
+            msg = labels[self.focus].format(self._widgets[self.focus].value)
+        else:
+            msg = labels[self.focus]
+        self._speak_item(msg=msg)
+
+    def _speak_checkbox_toggled(self):
+        if self._speak:
+            msg = 'checked' if self._widgets[self.focus].checked else 'unchecked'
+            self._speak_item(msg=msg)
+
+    def _speak_column_item_activated(self):
+        if self._speak:
+            labels = (None, 'Display by', 'Sort by')
+            msg = f'Item activated: {labels[self.focus]} ' + self._widgets[self.focus].get_item()
+            self._speak_item(msg=msg)
+
+    def _speak_help(self):
+        if self._speak:
+            num = len(self._history) - 1
+            out = [f'Item {self._selected_history_id} of {num}.']
+            if self._selected_history_id == 0:
+                outi.append('empty item.')
+            elif self._selected_history_id == self._history_id:
+                if self._default_history_id == self._history_id:
+                    out.append('default item. search results in stations list.')
+                else:
+                    out.append('search results in stations list.')
+            elif self._selected_history_id == self._default_history_id:
+                out.append('default item.')
+            out.append('History navigation:')
+            out.append('Go to next item: ' + kb2str(ctrl_code_to_string(kbkey['rb_h_next'])) + '.')
+            out.append('Go to previous item: ' + kb2str(ctrl_code_to_string(kbkey['rb_h_prev'])) + '.')
+            out.append('Go to first item: home. Go to last item: end.')
+            out.append('Add item: ' + kb2str(ctrl_code_to_string(kbkey['rb_h_add'])) + '.')
+            out.append('Delete item: ' + kb2str(ctrl_code_to_string(kbkey['rb_h_del'])) + '.')
+            out.append('Make item default: ' + kb2str(ctrl_code_to_string(kbkey['rb_h_def'])) + '.')
+            out.append('Save history: ' + kb2str(ctrl_code_to_string(kbkey['rb_h_save'])) + '.')
+            msg = ' '.join(out)
+            self._speak_item(msg=msg)
+
+    def _speak_item(self, msg=None, first=None):
+        if self._speak:
+            if first is True:
+                tok = 'Display by' if self.focus == 0 else 'Search for'
+                self._speak(args=(f'checked check box. {tok}', ), navigation=True)
+            if msg is not None:
+                self._speak(msg=msg, navigation=True)
 
     def _search_term_to_widgets(self, a_search):
         # logger.error('DE =========================')
@@ -2881,6 +2988,8 @@ class RadioBrowserSearchWindow():
                     2, 2,
                     'Display by',
                     curses.color_pair(9), curses.color_pair(4), curses.color_pair(5))
+            self._widgets[-1].callback_function = self._speak_checkbox_toggled
+            self._widgets[-1].callback_off_function = self._speak_checkbox_toggled
 
             ''' display by columns (index = 1) '''
             self._widgets.append(SimpleCursesWidgetColumns(
@@ -2925,6 +3034,8 @@ class RadioBrowserSearchWindow():
                     self._widgets[2].X - 2 + self._widgets[2].margin,
                     'Reverse order',
                     curses.color_pair(9), curses.color_pair(5), curses.color_pair(5)))
+            self._widgets[-1].callback_function = self._speak_checkbox_toggled
+            self._widgets[-1].callback_off_function = self._speak_checkbox_toggled
 
             ''' Two lines under the lists '''
             Y = max(self._widgets[2].Y, self._widgets[1].Y + self._widgets[1].height, self._widgets[3].Y) + 2
@@ -2937,6 +3048,8 @@ class RadioBrowserSearchWindow():
             self._widgets.append(SimpleCursesCheckBox(
                     Y, 2, 'Search for',
                     curses.color_pair(9), curses.color_pair(4), curses.color_pair(5)))
+            self._widgets[-1].callback_function = self._speak_checkbox_toggled
+            self._widgets[-1].callback_off_function = self._speak_checkbox_toggled
             self._calculate_widgets_yx(Y, X)
             for n in range(1,7):
                 if n == 6:
@@ -2947,6 +3060,8 @@ class RadioBrowserSearchWindow():
                         self.yx[n][1] + len(self.captions[n]) + 2,
                         'Exact',
                         curses.color_pair(9), curses.color_pair(5), curses.color_pair(5)))
+                    self._widgets[-1].callback_function = self._speak_checkbox_toggled
+                    self._widgets[-1].callback_off_function = self._speak_checkbox_toggled
                 self._widgets.append(SimpleCursesLineEdit(
                     parent=self._win,
                     width=X-2,
@@ -3095,6 +3210,9 @@ class RadioBrowserSearchWindow():
         self._h_buttons.calculate_buttons_position()
         self._print_history_legend()
         self._display_all_widgets()
+        if not self._first_item_spoken:
+            self._first_item_spoken = True
+            self._speak_item(first=True)
 
     def _print_history_legend(self):
 
@@ -3324,6 +3442,9 @@ class RadioBrowserSearchWindow():
 
         if self._too_small:
             return 1
+        if char == ord('t') and class_name != 'SimpleCursesLineEdit':
+            self._speak_help()
+            return 1
 
         if (char in (kbkey['g'], ord('0')) or \
                 check_localized(char, (kbkey['g']))) and \
@@ -3416,9 +3537,11 @@ class RadioBrowserSearchWindow():
                 if ret == 0:
                     # item selected
                     self._win.refresh()
+                    self._speak_column_item_activated()
                 elif ret == 2:
                     # cursor moved
                     self._win.refresh()
+                    self._speak_focus_change()
 
             elif self._focus in self._checkbox_to_enable_widgets:
                 ret = self._widgets[self._focus].keypress(char)
@@ -3648,6 +3771,7 @@ class RadioBrowserSearchWindow():
             self._focus = new_focus
             self._widgets[self._focus].focused = True
             self._win.refresh()
+            self._speak_focus_change()
 
     def _get_column_list(self, this_id):
         if this_id in self._left_column:
