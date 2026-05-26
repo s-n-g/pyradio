@@ -6177,7 +6177,9 @@ and |remove the file manually|.
             parent = self.outerBodyWin
         if self._cnf._online_browser:
             self._cnf._online_browser.show_config(
-                parent, init, self._cannot_delete_function, distro=distro)
+                parent, init, self._cannot_delete_function, distro=distro,
+                speak=self._speak_window if self._enable_tts and self._cnf.tts_context != 'limited' else None
+            )
         else:
             if self._browser_config_win is None:
                 self._show_connect_to_server_message()
@@ -7971,6 +7973,8 @@ _____"|f|" to see the |free| keys you can use.
                     self.tts.queue_speech('TTS disabled', Priority.HIGH)
                     self.tts = None
                     self.tts = TTSManagerDummy()
+                    if self._cnf.online_browser:
+                        self._cnf.online_browser.set_tts(None)
                     return
                 self.tts.set_enabled(False)
                 sleep(0.1)
@@ -7988,6 +7992,10 @@ _____"|f|" to see the |free| keys you can use.
                 )
                 if self._enable_tts:
                     self.tts.queue_speech('TTS enabled', Priority.HIGH)
+                if self._cnf.online_browser:
+                    self._cnf.online_browser.set_tts(
+                        self._speak_window if self._enable_tts and self._cnf.tts_context != 'limited' else None,
+                    )
 
             elif char == kbkey['toggle_time'] or \
                     check_localized(char, (kbkey['toggle_time'],)):
@@ -8503,6 +8511,7 @@ _____"|f|" to see the |free| keys you can use.
                     self.ws.SELECT_ENCODING_MODE,
                     self.ws.BUFFER_SET_MODE,
                     self.ws.BROWSER_SEARCH_MODE,
+                    self.ws.RADIO_BROWSER_CONFIG_MODE,
                     self.ws.EDIT_STATION_ENCODING_MODE) and \
                 self.ws.operation_mode not in self.ws.PASSIVE_WINDOWS and \
                 not self.is_search_mode(self.ws.operation_mode) and \

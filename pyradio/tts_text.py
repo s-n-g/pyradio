@@ -103,7 +103,11 @@ TTS_WINDOWS_TEXT = {
     Window_Stack_Constants.BROWSER_SEARCH_MODE:
         lambda msg: f'Window: radio browser search. Current item: {msg}. ' +
             kb2str('Note: press {tts_help} to hear the history navigation help when not in the line editor. '),
+    Window_Stack_Constants.RADIO_BROWSER_CONFIG_MODE:
+        lambda val: f'Window: radio browser config. General Options. Auto save config, value is {val}. ' +
+            kb2str('Note: press {tts_help} to hear info about the active item.'),
 }
+
 
 def describe_single_key(key_string):
     """

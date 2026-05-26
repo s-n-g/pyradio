@@ -1202,7 +1202,8 @@ class SimpleCursesCounter(SimpleCursesWidget):
         minimum=0, maximum=100,
         step=1, big_step=5, value=1, pad=0,
         number_length=3, string='{0}',
-        full_selection=None
+        full_selection=None,
+        speak=None
     ):
         super().__init__()
         self._Y = Y
@@ -1225,6 +1226,7 @@ class SimpleCursesCounter(SimpleCursesWidget):
         self._color_not_focused = color_not_focused
         self._color_disabled = color_disabled
         self._full_selection = full_selection
+        self._speak = speak
 
     def refresh(self):
         self.show(self._win)
@@ -1370,12 +1372,16 @@ class SimpleCursesCounter(SimpleCursesWidget):
             self._value -= self._big_step
             self._value = max(self._value, self._min)
             self.show(self._win)
+            if self._speak:
+                self._speak(f'set to {self._value}')
             return 0
 
         if char in (curses.KEY_PPAGE, ):
             self._value += self._big_step
             self._value = min(self._value, self._max)
             self.show(self._win)
+            if self._speak:
+                self._speak(f'set to {self._value}')
             return 0
 
         if char in (kbkey['h'], curses.KEY_LEFT) or \
@@ -1383,6 +1389,8 @@ class SimpleCursesCounter(SimpleCursesWidget):
             self._value -= self._step
             self._value = max(self._value, self._min)
             self.show(self._win)
+            if self._speak:
+                self._speak(f'set to {self._value}')
             return 0
 
         if char in (kbkey['l'], curses.KEY_RIGHT) or \
@@ -1390,6 +1398,8 @@ class SimpleCursesCounter(SimpleCursesWidget):
             self._value += self._step
             self._value = min(self._value, self._max)
             self.show(self._win)
+            if self._speak:
+                self._speak(f'set to {self._value}')
             return 0
 
         return 1
@@ -5163,7 +5173,8 @@ class SimpleCursesBoolean(SimpleCursesCounter):
         color_not_focused,
         color_disabled,
         string='{0}', value=False,
-        full_selection=None
+        full_selection=None,
+        speak=None
     ):
         super().__init__(
             Y =Y, X =X, window=window, color=color,
@@ -5181,6 +5192,7 @@ class SimpleCursesBoolean(SimpleCursesCounter):
         self._color_not_focused = color_not_focused
         self._color_disabled = color_disabled
         self._full_selection = full_selection
+        self._speak = speak
 
     @property
     def value(self):
@@ -5256,6 +5268,8 @@ class SimpleCursesBoolean(SimpleCursesCounter):
                 check_localized(char, (kbkey['l'], kbkey['l'], kbkey['pause'])):
             self.toggle()
             self.show(self._win)
+            if self._speak:
+                self._speak(msg=f'set to {self._value}')
             return 0
 
         return 1

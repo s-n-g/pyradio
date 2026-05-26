@@ -1396,7 +1396,8 @@ class RadioBrowser(PyRadioStationsBrowser):
                     Y=12, X=self._config_win._left+7,
                     show_random=True,
                     return_function=return_function,
-                    global_functions=global_functions
+                    global_functions=global_functions,
+                    speak=self._speak,
                 )
             else:
                 self._server_selection_window = RadioBrowserServersSelect(
@@ -1406,7 +1407,8 @@ class RadioBrowser(PyRadioStationsBrowser):
                     self._default_ping_count,
                     self._default_ping_timeout,
                     return_function=return_function,
-                    global_functions=global_functions
+                    global_functions=global_functions,
+                    speak=self._speak,
                 )
         else:
             self._server_selection_window.set_parent(self.parent)
@@ -1559,7 +1561,7 @@ class RadioBrowser(PyRadioStationsBrowser):
         self.keyboard_handler = self._search_win
         self._search_win.show()
 
-    def show_config(self, parent=None, init=False, cannot_delete_function=None, distro='None'):
+    def show_config(self, parent=None, init=False, cannot_delete_function=None, distro='None', speak=None):
         if init:
             self._config_win = RadioBrowserConfigWindow(
                 parent=parent,
@@ -1578,7 +1580,8 @@ class RadioBrowser(PyRadioStationsBrowser):
                 distro=distro,
                 with_browser=True,
                 global_functions=self._global_functions,
-                cannot_delete_function=cannot_delete_function
+                cannot_delete_function=cannot_delete_function,
+                speak=speak
             )
         self.keyboard_handler = self._config_win
         self._config_win.show(parent=parent)
@@ -1831,6 +1834,7 @@ class RadioBrowserConfigWindow():
                 1: current in browser window
                 2: from config
         '''
+        logger.error(f'\n\n{speak = }\n\n')
         self._too_small = False
         self._showed = False
         self._win = None
@@ -1841,16 +1845,16 @@ class RadioBrowserConfigWindow():
         self._server_selection_window = None
         self._default_history_id = 0
         self._focus = 0
-        self._auto_save =_showed = False
+        self._auto_save = self._showed = False
         self.invalid = False
         self._widgets = None
         self._params = []
-        self._focused = 0
         self._token = ''
         self.server_window_from_config = False
         self.keyboard_handler = None
         self.enable_servers = True
         self._speak = speak
+        self._first_item_spoken = False
         self._cannot_delete_function = cannot_delete_function
         if len(self._params) == 0:
             for _ in range(0, 3):
@@ -1948,24 +1952,20 @@ class RadioBrowserConfigWindow():
         return server
 
     def _focus_next(self):
-        if self._focused == len(self._widgets) - 1:
-            self._focused = 0
+        if self._focus == len(self._widgets) - 1:
+            self._focus = 0
         else:
-            self._focused += 1
-        while not self._widgets[self._focused].enabled:
-            self._focus_next()
-            return
+            self._focus += 1
         self._refresh()
+        self._speak_focus_change()
 
     def _focus_previous(self):
-        if self._focused == 0:
-            self._focused = len(self._widgets) - 1
+        if self._focus == 0:
+            self._focus = len(self._widgets) - 1
         else:
-            self._focused -= 1
-        while not self._widgets[self._focused].enabled:
-            self._focus_previous()
-            return
+            self._focus -= 1
         self._refresh()
+        self._speak_focus_change()
 
     def _refresh(self):
         self._fix_focus()
@@ -1973,7 +1973,7 @@ class RadioBrowserConfigWindow():
 
     def _fix_focus(self, show=True):
         for i, widg in enumerate(self._widgets):
-            widg.focused = self._focused == i
+            widg.focused = self._focus == i
         if show:
             for n in self._widgets:
                 n.show(self._win)
@@ -2149,7 +2149,8 @@ class RadioBrowserConfigWindow():
                     color_disabled=curses.color_pair(5),
                     value=self._params[0]['auto_save'],
                     string='Auto save config: {0}',
-                    full_selection=(2,59)
+                    full_selection=(2,59),
+                    speak=self._speak_item if self._speak else None
                 )
             )
             self._widgets[-1].token = 'auto_save'
@@ -2167,7 +2168,8 @@ class RadioBrowserConfigWindow():
                     step=1, big_step=10,
                     value=self._params[0]['limit'],
                     string='Maximum number of results: {0}',
-                    full_selection=(2,59)
+                    full_selection=(2,59),
+                    speak=self._speak_item if self._speak else None
                 )
             )
             self._widgets[-1].token = 'limit'
@@ -2186,7 +2188,8 @@ class RadioBrowserConfigWindow():
                     number_length=1,
                     value=self._params[0]['ping_count'],
                     string='Number of ping packages: {0}',
-                    full_selection=(2,59)
+                    full_selection=(2,59),
+                    speak=self._speak_item if self._speak else None
                 )
             )
             self._widgets[-1].token = 'ping_count'
@@ -2205,7 +2208,8 @@ class RadioBrowserConfigWindow():
                     number_length=1,
                     value=self._params[0]['ping_timeout'],
                     string='Ping timeout (seconds): {0}',
-                    full_selection=(2,59)
+                    full_selection=(2,59),
+                    speak=self._speak_item if self._speak else None
                 )
             )
             self._widgets[-1].token = 'ping_timeout'
@@ -2239,7 +2243,8 @@ class RadioBrowserConfigWindow():
                     color=curses.color_pair(5),
                     header_color=curses.color_pair(4),
                     highlight_color=curses.color_pair(6),
-                    cannot_delete_function=self._cannot_delete_function
+                    cannot_delete_function=self._cannot_delete_function,
+                    speak=self._speak_item if self._speak else None
                 )
             )
             self._widgets[-1].token = 'terms'
@@ -2268,6 +2273,48 @@ class RadioBrowserConfigWindow():
         self._widgets[-1].refresh()
 
         self._showed = True
+        if not self._first_item_spoken:
+            self._speak_item(first=True)
+            self._first_item_spoken = True
+
+    def _speak_focus_change(self):
+        if self._speak:
+            if self._focus == 0:
+                msg = f'Auto save config, value is {self._widgets[0].value}'
+            elif self._focus == 1:
+                msg = f'Maximum number of results, value is {self._widgets[1].value}'
+            elif self._focus == 2:
+                msg = f'Number of ping packages, value is {self._widgets[2].value}'
+            elif self._focus == 3:
+                msg = f'Ping timeout in seconds, value is {self._widgets[3].value}'
+            elif self._focus == 4:
+                msg = f'Default server, value is {self._widgets[4].string}'
+            else:
+                # terms
+                msg = f'Search terms, current item is number {self._widgets[-1].selection} out of {self._widgets[-1].number_of_items} items'
+                if self._widgets[-1].selection == self._widgets[-1].default:
+                    msg += '. This is the default item'
+            self._speak_item(msg=msg)
+
+    def _speak_item_help(self):
+        if self._focus == 0:
+            msg = 'If True, no confirmation will be asked before saving the configuration when leaving the search window'
+        elif self._focus == 1:
+            msg = 'A value of -1 will disable return items limiting'
+        elif self._focus in (2, 3):
+            msg = 'Set any ping parameter to 0 to disable server pinging'
+        elif self._focus == 4:
+            msg = 'Set to "Random" if you cannot connet to specific server'
+        elif self._focus == 5:
+            msg = 'Search ' + self._widgets[-1].item_to_string()
+        self._speak_item(msg=msg)
+
+    def _speak_item(self, msg=None, first=None):
+        if self._speak:
+            if first is True:
+                self._speak(args=(self._widgets[0].value, ), navigation=True)
+            if msg:
+                self._speak(msg=msg, navigation=True)
 
     def save_config(self):
         ''' RadioBrowserConfigWindow save config
@@ -2311,7 +2358,8 @@ class RadioBrowserConfigWindow():
                 Y=12, X=self._left+7,
                 show_random=True,
                 return_function=return_function,
-                global_functions=global_functions
+                global_functions=global_functions,
+                speak=self._speak_item if self._speak else None
             )
         else:
             self._server_selection_window.move(12, self._left+7, self._win)
@@ -2392,18 +2440,13 @@ class RadioBrowserConfigWindow():
         ) or  check_localized(char, (kbkey['q'], )):
             return -1
 
-        if (char in (kbkey['pause'], curses.KEY_ENTER, ord('\n'), ord('\r')) or \
-                check_localized(char, (kbkey['pause'], ))) and \
-                self._focus == len(self._widgets) - 2:
-            ''' enter on ok button  '''
-            ret = self._handle_new_or_existing_search_term()
-            # self._print_params()
-            return 0 if ret == 1 else ret
-
         if char == kbkey['?'] or check_localized(char, (kbkey['?'])):
             return 2
 
-        if char in (ord('\t'), 9, kbkey['tab']) or \
+        if char == kbkey['tts_help'] or check_localized(char, (kbkey['tts_help'], )):
+            self._speak_item_help()
+
+        elif char in (ord('\t'), 9, kbkey['tab']) or \
                 check_localized(char, (kbkey['tab'], )):
             # EDIT: fixed for H, L
             self._focus_next()
@@ -2420,13 +2463,15 @@ class RadioBrowserConfigWindow():
 
         elif char == kbkey['revert_def'] or \
                 check_localized(char, (kbkey['revert_def'], )):
-            self._revert_to_saved_params()
-            self.calculate_dirty()
-
-        elif char == kbkey['revert_def'] or \
-                check_localized(char, (kbkey['revert_def'], )):
             self._revert_to_default_params()
             self.calculate_dirty()
+            self._speak_item(msg='Default values loaded')
+
+        elif char == kbkey['revert_saved'] or \
+                check_localized(char, (kbkey['revert_saved'], )):
+            self._revert_to_saved_params()
+            self.calculate_dirty()
+            self._speak_item(msg='Saved values loaded')
 
         elif char in (curses.KEY_DOWN, kbkey['j']) or \
                 check_localized(char, (kbkey['j'], )):
@@ -2439,39 +2484,39 @@ class RadioBrowserConfigWindow():
             self.calculate_dirty()
 
         else:
-            if self._focused < 4:
+            if self._focus < 4:
                 if self._widgets is None:
                     return 0
-                if self._widgets[self._focused]:
-                    ret = self._widgets[self._focused].keypress(char)
+                if self._widgets[self._focus]:
+                    ret = self._widgets[self._focus].keypress(char)
                 else:
                     return 0
                 if ret == 0:
 
-                    if self._focused == 0:
+                    if self._focus == 0:
                         ''' auto save  '''
                         self._widgets[0].show(self._win)
                         self._params[0]['auto_save'] = self._widgets[0].value
                         self.calculate_dirty()
 
                     else:
-                        ''' limit  '''
-                        self._widgets[self._focused].show(self._win)
-                        self._params[0][self._widgets[self._focused].token] = self._widgets[self._focused].value
-                        if self._focused in (2, 3):
+                        ''' limit or ping '''
+                        self._widgets[self._focus].show(self._win)
+                        self._params[0][self._widgets[self._focus].token] = self._widgets[self._focus].value
+                        if self._focus in (2, 3):
                             self._fix_ping_enable()
                     self._win.refresh()
                     #self._print_params()
                     self.calculate_dirty()
 
-            elif self._focused == 4:
+            elif self._focus == 4:
                 ''' server '''
                 if char in (ord('\r'), curses.KEY_ENTER, ord('\n'),
                             kbkey['pause'], kbkey['l'], curses.KEY_RIGHT) or \
                         check_localized(char, (kbkey['pause'], kbkey['l'])):
                     ''' open server selection window '''
                     return 3
-            elif self._focused == 5:
+            elif self._focus == 5:
                 ''' terms '''
                 ret = self._widgets[-1].keypress(char)
                 self.calculate_dirty()
@@ -4033,6 +4078,7 @@ class RadioBrowserDns():
                 self._urls.append(str(n).split(' ')[-1][:-1])
         else:
             self._urls = None
+        logger.error(f'====> {self._urls = }')
 
     def _get_countries(self):
         self._countries = []
@@ -4271,7 +4317,8 @@ class RadioBrowserServersSelect():
                  X=None,
                  show_random=False,
                  return_function=None,
-                 global_functions=None):
+                 global_functions=None,
+                 speak=None):
         ''' Server selection Window
             if Y and X are valid (not None)
               keypress just returns 0
@@ -4288,9 +4335,11 @@ class RadioBrowserServersSelect():
         self.ping_timeout = ping_timeout
         self._show_random = self.from_config = show_random
         self._return_function = return_function
+        self._speak = speak
+        self._first_item_spoken = False
 
         self.servers = RadioBrowserServers(
-            parent, servers, current_server, show_random, global_functions
+            parent, servers, current_server, show_random, speak, global_functions
         )
         self.maxY = self.servers.maxY + 2
         self.maxX = self.servers.maxX + 2
@@ -4348,6 +4397,11 @@ class RadioBrowserServersSelect():
         self._box_and_title()
         self.servers._parent = self._win
         self.servers.show()
+
+        if not self._first_item_spoken and self._speak:
+            tok = self.servers.items[self.servers.selection].strip().split(' ')[0]
+            self._speak(f'Window: Server Selection, current item is {tok}')
+            self._first_item_spoken = True
 
     def _box_and_title(self):
         self._win.box()
@@ -4425,13 +4479,21 @@ class RadioBrowserServers():
         another widget
     '''
 
-    def __init__(self, parent, servers, current_server, show_random=False, global_functions=None):
+    def __init__(
+            self,
+            parent,
+            servers,
+            current_server,
+            show_random=False,
+            speak=None,
+            global_functions=None):
         self._too_small = False
         self._win = None
         self._parent = parent
         self.items = list(servers)
         self.server = current_server
         self.from_config = show_random
+        self._speak = speak
 
         s_max = 0
         for i, n in enumerate(self.items):
@@ -4500,6 +4562,7 @@ class RadioBrowserServers():
                  1: Continue
                  2: Show help
         '''
+        logger.error(f'\n\n{self._speak = }\n\n')
 
         l_char = None
         if self._too_small:
@@ -4540,11 +4603,17 @@ class RadioBrowserServers():
                 check_localized(char, (kbkey['g'], )):
             self.selection = 0
             self.show()
+            if self._speak:
+                tok = self.items[self.selection].strip().split(' ')[0]
+                self._speak(msg=f'selection is {tok}')
 
         elif char in (kbkey['G'], curses.KEY_END) or \
                 check_localized(char, (kbkey['G'], )):
             self.selection = len(self.items) - 1
             self.show()
+            if self._speak:
+                tok = self.items[self.selection].strip().split(' ')[0]
+                self._speak(msg=f'selection is {tok}')
 
         elif char in (curses.KEY_PPAGE, ):
             if self.selection == 0:
@@ -4553,6 +4622,9 @@ class RadioBrowserServers():
                 self.selection -= 5
                 self.selection = max(self.selection, 0)
             self.show()
+            if self._speak:
+                tok = self.items[self.selection].strip().split(' ')[0]
+                self._speak(msg=f'selection is {tok}')
 
         elif char in (curses.KEY_NPAGE, ):
             if self.selection == len(self.items) - 1:
@@ -4562,6 +4634,9 @@ class RadioBrowserServers():
                 if self.selection >= len(self.items):
                     self.selection = len(self.items) - 1
             self.show()
+            if self._speak:
+                tok = self.items[self.selection].strip().split(' ')[0]
+                self._speak(msg=f'selection is {tok}')
 
         elif char in (kbkey['k'], curses.KEY_UP) or \
                 check_localized(char, (kbkey['k'], )):
@@ -4569,6 +4644,9 @@ class RadioBrowserServers():
             if self.selection < 0:
                 self.selection = len(self.items) - 1
             self.show()
+            if self._speak:
+                tok = self.items[self.selection].strip().split(' ')[0]
+                self._speak(msg=f'selection is {tok}')
 
         elif char in (kbkey['j'], curses.KEY_DOWN) or \
                 check_localized(char, (kbkey['j'], )):
@@ -4576,6 +4654,9 @@ class RadioBrowserServers():
             if self.selection == len(self.items):
                 self.selection = 0
             self.show()
+            if self._speak:
+                tok = self.items[self.selection].strip().split(' ')[0]
+                self._speak(msg=f'selection is {tok}')
 
         return 1
 
@@ -4727,7 +4808,8 @@ class RadioBrowserTermNavigator(SimpleCursesWidget):
         header_color,
         highlight_color,
         cannot_delete_function,
-        log_file=''
+        log_file='',
+        speak=None
     ):
         """ A widget to show RarioBrowser Search Terms
             Available actions:
@@ -4769,11 +4851,20 @@ class RadioBrowserTermNavigator(SimpleCursesWidget):
         self._selection = self._orig_default = default
         self._items =deepcopy(items)
         self._cannot_delete_function = cannot_delete_function
+        self._speak = speak
 
     @property
     def dirty(self):
         return self._default != self._orig_default or \
             self._items != self._orig_items
+
+    @property
+    def number_of_items(self):
+        return len(self._items) - 1
+
+    @property
+    def default(self):
+        return self._default
 
     @property
     def selection(self):
@@ -4814,6 +4905,60 @@ class RadioBrowserTermNavigator(SimpleCursesWidget):
             if token in self._items[self._selection]['post_data']:
                 str_out = '{}'.format(self._items[self._selection]['post_data'][token].ljust(15))
         self._win.addstr(str_out, col)
+
+    def item_to_string(self, default_limit=100):
+        '''
+        Convert an item dict to a human-readable string.
+        '''
+        index = self._selection
+        item = self._items[index]
+        is_default = index == self._default
+        parts = []
+
+        if index is not None:
+            parts.append(f'Item {index}')
+
+        # Default marker
+        if is_default:
+            parts[0] += ', default item.'
+        else:
+            parts[0] += '.'
+
+        item_type = item.get('type', 'unknown')
+        parts.append(f'type is {item_type}')
+
+        # Include 'term' only if type starts with 'by' (byname, bytag, etc.)
+        if item_type.startswith('by') and 'term' in item:
+            parts.append(f'term is {item['term']}')
+
+        # Post data fields
+        post = item.get('post_data', {})
+
+        # Extra optional fields from post_data
+        for field in ['codec', 'language', 'name', 'tag', 'country', 'state']:
+            if field in post:
+                parts.append(f'{field} is {post[field]}')
+
+        # Determine limit: priority to post['limit'], then if type is one of the special ones
+        # (topvote, lastchange, topclick, lastclick) use term as limit, otherwise default_limit
+        limit = None
+        if 'limit' in post:
+            limit = post['limit']
+        elif item_type in ('topvote', 'lastchange', 'topclick', 'lastclick') and 'term' in item:
+            limit = item['term']
+        else:
+            limit = default_limit
+        if limit is not None:
+            parts.append(f'limit is {limit} results')
+
+        if 'order' in post:
+            parts.append(f'order is {post['order']}')
+        if 'reverse' in post:
+            rev = 'descending' if post['reverse'] == 'true' else 'ascending'
+            parts.append(rev)
+        parts[-1] += '.'
+
+        return ', '.join(parts).replace('.,', '.')
 
     def show(self, parent=None):
         if self._focused:
@@ -4967,26 +5112,31 @@ class RadioBrowserTermNavigator(SimpleCursesWidget):
             if self._selection == len(self._items):
                 self._selection -= 1
             self.show()
+            self._speak_item(msg='Item deleted')
 
     def _go_up(self):
         self._selection -= 1
         if self._selection < 1:
             self._selection = len(self._items) - 1
         self.show()
+        self._speak_item()
 
     def _go_down(self):
         self._selection += 1
         if self._selection == len(self._items):
             self._selection = 1
         self.show()
+        self._speak_item()
 
     def _go_home(self):
         self._selection = 1
         self.show()
+        self._speak_item()
 
     def _go_end(self):
         self.selection = len(self._items) - 1
         self.show()
+        self._speak_item()
 
     def _jump_up(self):
         if self._selection == 1:
@@ -4998,6 +5148,7 @@ class RadioBrowserTermNavigator(SimpleCursesWidget):
             else:
                 self._selection = sel
         self.show()
+        self._speak_item()
 
     def _jump_down(self):
         if self._selection == len(self._items) - 1:
@@ -5009,6 +5160,7 @@ class RadioBrowserTermNavigator(SimpleCursesWidget):
             else:
                 self._selection = sel
         self.show()
+        self._speak_item()
 
     def keypress(self, char):
         """ RadioBrowserTermNavigator keypress
@@ -5037,6 +5189,7 @@ class RadioBrowserTermNavigator(SimpleCursesWidget):
             if self._items:
                 self._default = self._selection
                 self.show()
+                self._speak_item(msg='Item is now default')
         elif char in (curses.KEY_LEFT, kbkey['h'], kbkey['prev']) or \
                 check_localized(char, (kbkey['prev'], kbkey['h'])):
             self._go_up()
@@ -5057,6 +5210,14 @@ class RadioBrowserTermNavigator(SimpleCursesWidget):
                 check_localized(char, (kbkey['q'], )):
             return -1
         return 1
+
+    def _speak_item(self, msg=None):
+        if self._speak:
+            if msg is None:
+                tok = 'This is the default item' if self._selection == self._default else ''
+                self._speak(msg=f'changed to item number {self.selection}. {tok}')
+            else:
+                self._speak(msg=msg)
 
     def _log(self, msg):
         with open(self._log_file, 'a', encoding='utf-8') as log_file:
