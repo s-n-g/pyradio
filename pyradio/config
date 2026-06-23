@@ -58,7 +58,7 @@ wheel_adjusts_volume = False
 
 
 # Recordings directory
-# This is the firectory where recorded files will be saved
+# This is the directory where recorded files will be saved
 #
 # Please do not change this parameter manually in the user's configuration file
 # as it will cause problems. Use the in program Window instead:
@@ -203,6 +203,25 @@ tts_speak_volume_change_start = False
 #
 # Default value: False
 log_titles = False
+
+# Number of backup title log files to keep.
+# When the current log file reaches its maximum size, it is rotated and
+# older log files are renamed accordingly. Higher values retain a longer
+# logging history at the expense of disk space.
+#
+# Valid values: 1 - 100
+# Default value: 5
+log_titles_backup_count = 5
+
+# Maximum size of a title log file in kB.
+# When this size is reached, the log file is rotated and a new one is
+# created. The actual file size limit passed to the logging subsystem is
+# calculated using decimal units (1 kB = 1000 bytes).
+#
+# Valid values: 50 - 10000  (50 kB - 10 MB)
+# Step: 50
+# Default value: 50
+log_titles_max_kbytes = 50
 
 # Use OS Media Controls
 # When enabled, PyRadio can be controlled from the system’s media keys,
@@ -367,7 +386,7 @@ localized_keys = None
 #
 # This setting has no effect on Windows
 #
-# Packagers should set this paramater as resired!
+# Packagers should set this parameter as desired!
 #
 # Default value: False
 xdg_compliant = False
@@ -376,7 +395,7 @@ xdg_compliant = False
 # to anything other than "None" PyRadio will not permit updating (-U command
 # line parameter) or removing the package (-R command line parameter).
 #
-# Packagers must populate this paramater as needed!
+# Packagers must populate this parameter as needed!
 #
 # Default value: None
 distro = None

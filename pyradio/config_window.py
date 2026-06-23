@@ -75,7 +75,6 @@ class PyRadioConfigWindow():
     _help_text.append(['This is a Linux (et al) only parameter. It has no effect on Windows or MacOS.', '|',
                        'Default value is "auto", in which case, PyRadio will try to use xdg-open, gio, mimeopen, mimeo or handlr, in that order of detection.  If none if found, the requested file will simply not open.'
                        ])
-    _help_text.append(['If this option is True, PyRadio will start logging song titles to a log file at program startup, provided that the station playing does provide title data.', '|', 'This is the same as using the -lt command line option, or pressing "' + to_str('t_tag') +  '" while the program is running.', '|', 'Please keep in mind that this option will only affect program startup.', '|', 'Default value: False'])
     if SYSTEM == 'Linux':
         _help_text.append(['Enables integration with the desktop media controls (MPRIS).', '|', "When enabled, PyRadio can be controlled from the system's media keys, desktop widgets and external tools (e.g. playerctl).", '|', 'Default value: False'])
     elif SYSTEM == 'Windows':
@@ -99,6 +98,10 @@ class PyRadioConfigWindow():
     _help_text.append(['Notice: Not applicable on Windows!', '|',  'Online Radio Directory Services (like RadioBrowser) will usually provide an icon for the stations they advertise.', '|', 'PyRadio can use this icon (provided that one exists and is of JPG or PNG format) while displaying Desktop Notifications.', '|', 'Setting this option to True, will enable the behavior above.', '|', 'If this option is False, the default icon will be used.', '|', 'Default value: True'])
     _help_text.append(['Notice: Not applicable on Windows!', '|', 'If the previous option is enabled, Stations Icons will be cached.', '|', 'If this option is set to True, all icons will be deleted at program exit.', '|', 'If set to False, the icons will be available for future use.', '|', 'Default value: True'])
     _help_text.append(['When enabled, PyRadio updates the window (terminal) title with playback information.', '|', 'Disable this by setting the parameter to False.', '|', 'Default value: True'])
+    _help_text.append(None)
+    _help_text.append(['If this option is True, PyRadio will start logging song titles to a log file at program startup, provided that the station playing does provide title data.', '|', 'This is the same as using the -lt command line option, or pressing "' + to_str('t_tag') +  '" while the program is running.', '|', 'Please keep in mind that this option will only affect program startup.', '|', 'Default value: False'])
+    _help_text.append(['Number of backup title log files to keep.', '|', 'When the current log file reaches its maximum size, it is rotated and older log files are renamed accordingly. Higher values retain a longer logging history at the expense of disk space.', '|', 'Note: Changes to title logging settings take effect the next time the title logger is initialized.', '|', 'Valid values: 1 - 100', 'Default value: 5'])
+    _help_text.append(['Maximum size of a title log file in kB.', '|', 'When this size is reached, the log file is rotated and a new one is created. The actual file size limit passed to the logging subsystem is calculated using decimal units (1 kB = 1000 bytes).', '|', 'Note: Changes to title logging settings take effect the next time the title logger is initialized.', '|', 'Valid values: 50 - 10000  (50 kB - 10 MB)', 'Step: 50', 'Default value: 50'])
     _help_text.append(None)
     _help_text.append(['PyRadio now features comprehensive Text-to-Speech (TTS) support, providing auditory feedback for an enhanced radio streaming experience.', '|', 'This system delivers contextual information about station navigation, playback status, and system events.', '|', 'The TTS function cal also be termporarily toggled by pressing ' + to_str('open_extra') + to_str('toggle_tts') + '.', '|', 'Default value: False'])
     # TTS Volume
@@ -346,6 +349,35 @@ class PyRadioConfigWindow():
                 return n
         return -1
 
+    def _format_tts_kbytes(self, msg):
+        parts = msg.rsplit(' ', 1)
+
+        if len(parts) != 2:
+            return msg
+
+        try:
+            kb = int(parts[1])
+        except (ValueError, TypeError):
+            return msg
+
+        if kb < 1000:
+            value = '{} kilobytes'.format(kb)
+        else:
+            mb = kb / 1000.0
+
+            if mb.is_integer():
+                value = '{} megabytes'.format(int(mb))
+            else:
+                value = '{:.2f}'.format(mb).rstrip('0').rstrip('.')
+                value = value.replace('.', ' point ')
+                value += ' megabytes'
+
+        # convert "1 megabytes" to "1 megabyte"
+        if parts[1] == '1000':
+            value = value[:-1]
+
+        return '{} {}'.format(parts[0], value)
+
     def _speak_item(self):
         if not self._can_speak:
             return
@@ -378,6 +410,8 @@ class PyRadioConfigWindow():
             msg ='Window: PyRadio configuration. ' + msg
             msg = msg + '. Note: press {} on a setting to hear a description'.format(to_str('tts_help'))
             self._first_item_spoken = True
+        if cur_key == 'log_titles_max_kbytes':
+            msg = self._format_tts_kbytes(msg)
         self.tts().queue_speech(msg, Priority.NAVIGATION, Context.LIMITED, self.op_mode())
 
     def _speak_port_changed(self):
@@ -558,6 +592,32 @@ class PyRadioConfigWindow():
             except:
                 pass
 
+    def _format_log_size(self, skb):
+        """Return a fixed-width (7 chars) log size string.
+
+        Examples:
+            50    -> '50 KB  '
+            950   -> '950 KB '
+            1000  -> '1 MB   '
+            1050  -> '1.05 MB'
+            1100  -> '1.1 MB '
+            1150  -> '1.15 MB'
+            9950  -> '9.95 MB'
+            10000 -> '10 MB  '
+        """
+        kb = int(skb)
+        if kb < 1000:
+            return f'{kb} KB'.ljust(7)
+
+        mb = kb / 1000.0
+
+        if mb.is_integer():
+            text = f'{int(mb)} MB'
+        else:
+            text = f'{mb:.2f}'.rstrip('0').rstrip('.') + ' MB'
+
+        return text.ljust(7)
+
     def refresh_selection(self):
         self._print_title()
         if not self.too_small:
@@ -612,6 +672,8 @@ class PyRadioConfigWindow():
                         logger.error('line editor string = "{}"'.format(self._port_line_editor.string))
                     elif isinstance(it[1], bool):
                         self._win.addstr('{}'.format(it[1]), hcol)
+                    elif it[0] == '  Max file size: ':
+                        self._win.addstr('{}'.format(self._format_log_size(it[1])), hcol)
                     else:
                         # logger.error(f'{it = }')
                         if it[1] is None:
@@ -1020,6 +1082,8 @@ class PyRadioConfigWindow():
                 'tts_rate',
                 'tts_pitch',
                 'tts_speak_volume_change',
+                'log_titles_backup_count',
+                'log_titles_max_kbytes',
             ) and char in (
                 curses.KEY_LEFT,
                 curses.KEY_RIGHT,
@@ -1136,6 +1200,227 @@ class PyRadioConfigWindow():
         elif val[0] == 'remote_control_server_port':
             ret = self._port_line_editor.keypress(self._win, char)
             if ret == 1:
+                return -1, []
+
+        elif val[0] == 'log_titles_backup_count':
+            if char in (curses.KEY_RIGHT, kbkey['l']) or \
+                    check_localized(char, (kbkey['l'], )):
+                if val[1][1] == '100':
+                    return -1, []
+
+                t = int(val[1][1])
+                t += 1
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    val[1][1] + '  ', curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
+                return -1, []
+
+            if char in (curses.KEY_LEFT, kbkey['h']) or \
+                    check_localized(char, (kbkey['h'], )):
+                if val[1][1] == '0' or val[1][1] == '1':
+                    return -1, []
+                t = int(val[1][1])
+                t -= 1
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    val[1][1] + '  ', curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
+                return -1, []
+
+        elif val[0] == 'log_titles_max_kbytes':
+            if char in (curses.KEY_RIGHT, kbkey['l']) or \
+                    check_localized(char, (kbkey['l'], )):
+                if val[1][1] == '100000':
+                    return -1, []
+
+                t = int(val[1][1])
+                t += 50
+                t = min(t, 10000)
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    self._format_log_size(val[1][1]) , curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
+                return -1, []
+
+            if char in (curses.KEY_LEFT, kbkey['h']) or \
+                    check_localized(char, (kbkey['h'], )):
+                if val[1][1] == '50':
+                    return -1, []
+                t = int(val[1][1])
+                t -= 50
+                t = max(t, 50)
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    self._format_log_size(val[1][1]), curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
+                return -1, []
+        elif val[0] == 'log_titles_backup_count':
+            if char in (curses.KEY_RIGHT, kbkey['l']) or \
+                    check_localized(char, (kbkey['l'], )):
+                if val[1][1] == '100':
+                    return -1, []
+
+                t = int(val[1][1])
+                t += 1
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    val[1][1] + '  ', curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
+                return -1, []
+
+            if char in (curses.KEY_LEFT, kbkey['h']) or \
+                    check_localized(char, (kbkey['h'], )):
+                if val[1][1] == '0' or val[1][1] == '1':
+                    return -1, []
+                t = int(val[1][1])
+                t -= 1
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    val[1][1] + '  ', curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
+                return -1, []
+        elif val[0] == 'log_titles_backup_count':
+            if char in (curses.KEY_RIGHT, kbkey['l']) or \
+                    check_localized(char, (kbkey['l'], )):
+                if val[1][1] == '100':
+                    return -1, []
+
+                t = int(val[1][1])
+                t += 1
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    val[1][1] + '  ', curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
+                return -1, []
+
+            if char in (curses.KEY_LEFT, kbkey['h']) or \
+                    check_localized(char, (kbkey['h'], )):
+                if val[1][1] == '0' or val[1][1] == '1':
+                    return -1, []
+                t = int(val[1][1])
+                t -= 1
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    val[1][1] + '  ', curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
+                return -1, []
+        elif val[0] == 'log_titles_backup_count':
+            if char in (curses.KEY_RIGHT, kbkey['l']) or \
+                    check_localized(char, (kbkey['l'], )):
+                if val[1][1] == '100':
+                    return -1, []
+
+                t = int(val[1][1])
+                t += 1
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    val[1][1] + '  ', curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
+                return -1, []
+
+            if char in (curses.KEY_LEFT, kbkey['h']) or \
+                    check_localized(char, (kbkey['h'], )):
+                if val[1][1] == '0' or val[1][1] == '1':
+                    return -1, []
+                t = int(val[1][1])
+                t -= 1
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    val[1][1] + '  ', curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
+                return -1, []
+        elif val[0] == 'log_titles_backup_count':
+            if char in (curses.KEY_RIGHT, kbkey['l']) or \
+                    check_localized(char, (kbkey['l'], )):
+                if val[1][1] == '100':
+                    return -1, []
+
+                t = int(val[1][1])
+                t += 1
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    val[1][1] + '  ', curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
+                return -1, []
+
+            if char in (curses.KEY_LEFT, kbkey['h']) or \
+                    check_localized(char, (kbkey['h'], )):
+                if val[1][1] == '0' or val[1][1] == '1':
+                    return -1, []
+                t = int(val[1][1])
+                t -= 1
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    val[1][1] + '  ', curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
+                return -1, []
+        elif val[0] == 'log_titles_backup_count':
+            if char in (curses.KEY_RIGHT, kbkey['l']) or \
+                    check_localized(char, (kbkey['l'], )):
+                if val[1][1] == '100':
+                    return -1, []
+
+                t = int(val[1][1])
+                t += 1
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    val[1][1] + '  ', curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
+                return -1, []
+
+            if char in (curses.KEY_LEFT, kbkey['h']) or \
+                    check_localized(char, (kbkey['h'], )):
+                if val[1][1] == '0' or val[1][1] == '1':
+                    return -1, []
+                t = int(val[1][1])
+                t -= 1
+                val[1][1] = str(t)
+                self._win.addstr(
+                    Y, 3 + len(val[1][0]),
+                    val[1][1] + '  ', curses.color_pair(6))
+                self._print_title()
+                self._speak_item()
+                self._win.refresh()
                 return -1, []
 
         elif val[0] == 'enable_notifications':
@@ -2604,8 +2889,11 @@ class PyRadioSelectPlayer():
             parent,
             player,
             parameters_editing_error_function=None,
-            global_functions=None
+            global_functions=None,
+            speak=None
             ):
+        self._speak = speak
+        self._first_item_spoken = False
         self.selection = 0
         self._win = None
         self._extra = None
@@ -2655,6 +2943,7 @@ class PyRadioSelectPlayer():
     def refresh_list(self):
         if self._extra is not None:
             self._extra.refresh_win()
+        logger.error('4')
 
     @property
     def from_config(self):
@@ -2747,6 +3036,7 @@ class PyRadioSelectPlayer():
                 title, curses.color_pair(11))
             self._win.refresh()
             self._parameter_editor.show()
+        logger.error('1')
 
     def refresh_selection(self):
         for i, _ in enumerate(self._players):
@@ -2774,6 +3064,7 @@ class PyRadioSelectPlayer():
             )
             # self._win.hline(i+2, 1, ' ', self.maxX - 2, curses.color_pair(10))
         self._win.refresh()
+        logger.error('2')
         return
 
         if self._working_players[0]:
@@ -2788,12 +3079,37 @@ class PyRadioSelectPlayer():
         if self._parameter_editor:
             self._parameter_editor.resize(self._win)
         self.refresh_win(True)
+        logger.error('3')
 
     def reset(self):
         self._extra.reset(from_reset=True)
         self._populate_players()
         self.refresh_win(do_params=True)
         self._cnf.params_changed = False
+
+    def _speak_player_focus(self):
+        tok = 'checked ' if self._players[self.selection][1] else 'unchecked '
+        msg = f'{tok} check box {self._players[self.selection][0]}'
+        logger.error(f'{msg = }')
+
+    def _speak_player_move(self, down=None):
+        tok = 'up ' if down is None else 'down'
+        msg = f'player {self._players[self.selection][0]} moved {tok}, index is {self.selection}'
+        logger.error(f'{msg = }')
+
+    def _speak_player_check(self):
+        tok = 'checked ' if self._players[self.selection][1] else 'unchecked '
+        msg = f'set to {tok}'
+        logger.error(f'{msg = }')
+
+    def _speak_switch_column(self):
+        if self.focus:
+            # players
+            tok = 'checked ' if self._players[self.selection][1] else 'unchecked '
+            msg = f'column is Supported Players, player is {self._players[self.selection][0]}, {tok}'
+        else:
+            msg = 'column is player parameters'
+        logger.error(f'{msg = }')
 
     def keypress(self, char):
         ''' PyRadioSelectPlayer keypress
@@ -2858,6 +3174,7 @@ class PyRadioSelectPlayer():
                         check_localized(char, (kbkey['l'], kbkey['pause'])):
                     self._players[self.selection][1] = not self._players[self.selection][1]
                     self.refresh_selection()
+                    self._speak_player_check()
 
                 elif char in (curses.ascii.NAK, 21):
                     ''' ^U, move player Up '''
@@ -2869,6 +3186,7 @@ class PyRadioSelectPlayer():
                         self.selection -= 1
                         self._players.insert(self.selection, x)
                     self.refresh_selection()
+                    self._speak_player_move()
 
                 elif char in (curses.ascii.EOT, 4):
                     ''' ^D, move player Down '''
@@ -2881,6 +3199,7 @@ class PyRadioSelectPlayer():
                         self.selection += 1
                         self._players.insert(self.selection, x)
                     self.refresh_selection()
+                    self._speak_player_move(down=True)
 
                 elif char in (curses.KEY_UP, kbkey['k']) or \
                         check_localized(char, (kbkey['k'], )):
@@ -2889,6 +3208,7 @@ class PyRadioSelectPlayer():
                         self.selection = len(self._players) - 1
                     self.refresh_selection()
                     self._extra.set_player(self.selected_player_name(), True)
+                    self._speak_player_focus()
 
                 elif char in (curses.KEY_DOWN, kbkey['j']) or \
                         check_localized(char, (kbkey['j'], )):
@@ -2897,6 +3217,7 @@ class PyRadioSelectPlayer():
                         self.selection = 0
                     self.refresh_selection()
                     self._extra.set_player(self.selected_player_name(), True)
+                    self._speak_player_focus()
 
             else:
                 ''' focus on parameters '''
@@ -2969,6 +3290,7 @@ class PyRadioSelectPlayer():
         self._extra.focused = not self.focus
         self.refresh_selection()
         self._extra.refresh_win()
+        self._speak_switch_column()
 
     def setPlayers(self, these_players):
         self.player = these_players

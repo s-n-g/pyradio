@@ -922,7 +922,7 @@ class PyRadio():
             kbkey['s_vol']: self._volume_save,
             kbkey['t_calc_col']: self._toggle_claculated_colors,
             kbkey['repaint']: self._resize_with_number_sign,
-            ord('b'): self._show_schedule_editor,
+            # ord('b'): self._show_schedule_editor,
         }
 
         self._local_functions_template = {
@@ -8687,6 +8687,7 @@ _____"|f|" to see the |free| keys you can use.
                         self.outerBodyWin,
                         self._config_win._config_options['player'][1],
                         parameters_editing_error_function=self._show_player_parameter_editing_error,
+                        speak=self._speak_window if self._enable_tts and self._cnf.tts_context != 'limited' else None,
                         global_functions=self._global_functions
                     )
                 else:
@@ -9089,7 +9090,7 @@ _____"|f|" to see the |free| keys you can use.
                     ''' display line editor help '''
                     self._open_message_win_by_key('H_LINE_EDITOR')
                 elif ret == 3:
-                    ''' Got into paramater editor '''
+                    ''' Got into parameter editor '''
                     self.ws.operation_mode = self.ws.IN_PLAYER_PARAMS_EDITOR
                 elif ret == 4:
                     ''' Parameter editor exited '''

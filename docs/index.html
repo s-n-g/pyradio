@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <meta charset="utf-8" />
-  <meta name="generator" content="pandoc" />
+  <meta name="generator" content="pandoc 3.10" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>PyRadio Documentation</title>
     <style> 
@@ -2454,13 +2454,16 @@ volume=50</pre>
 </table>
 <p style="margin: 1.5em 4em 0 4em; text-indent: -2.5em;"><strong>Note:</strong> The <strong>Wheel</strong> can be configured to adjust the player’s volume instead of its default scrolling function through the “<em>Adjust volume</em>” configuration option. Then, <strong>BShift-Wheel</strong> will scroll through the playlist. This is useful if <strong>Shift-Wheel</strong> does not work, or one is accustomed to using the wheel for volume control.</p>
 <h2 id="title-logging">Title logging <span style="padding-left: 10px;"><sup style="font-size: 50%"><a href="#" title="Go to top of the page">Top</a></sup></span></h2>
-<p>Version <strong>0.8.9.17</strong> adds to <strong>PyRadio</strong> the ability to log the titles displayed at the bottom of its window, in a log file, for reference.</p>
+<p><strong>PyRadio</strong> has the ability to log the titles displayed at the bottom of its window, in a log file, for reference.</p>
 <p>The logger, which is a special kind of <em>debug logger</em>, but works independently from the “<em>debug</em>” function, is actually a <a target="_blank" href="https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler">Rotating File Handler</a>, configured to write up to 5 files of around 50KB each (parameters <strong>maxBytes=50000</strong> and <strong>backupCount=5</strong>).</p>
 <p>The way this works, according to the documentation, is that one “can use the <strong>maxBytes</strong> and <strong>backupCount</strong> values to allow the file to rollover at a predetermined size. When the size is about to be exceeded, the file is closed and a new file is silently opened for output. Rollover occurs whenever the current log file is nearly <strong>maxBytes</strong> in length… When <strong>backupCount</strong> is non-zero, the system will save old log files by appending the extensions ‘.1’, ‘.2’ etc., to the filename. For example, with a backupCount of 5 and a base file name of <strong>app.log</strong>, you would get <em>app.log</em>, <em>app.log.1</em>, <em>app.log.2</em>, up to <em>app.log.5</em>. The file being written to is always <strong>app.log</strong>. When this file is filled, it is closed and renamed to <em>app.log.1</em>, and if files <em>app.log.1</em>, <em>app.log.2</em>, etc. exist, then they are renamed to <em>app.log.2</em>, <em>app.log.3</em> etc. respectively.</p>
 <p>The function can be enabled:</p>
 <ol type="1">
 <li>using the -lt (--log-titles) command line option, or</li>
 <li>by pressing “<strong>W</strong>” while in the <strong>Main</strong>, the <strong>Playlist</strong> or the <strong>Register</strong> mode.</li>
+<li>Through the <strong>Configuration</strong> window, section <strong>Song Title Logging</strong>.<br />
+<br />
+This section also presents the “<strong>Number of files</strong>” and “<strong>Max file size</strong>” parameters making the <a target="_blank" href="https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler">Rotating File Handler’s</a> <em>backupCount</em> and <em>maxBytes</em> parameters configurable. Changes to these settings take effect the next time the title logger is initialized.</li>
 </ol>
 <p>The titles are written in a file called <em>pyradio-titles.log</em> which is located in the <strong>Recordings Directory</strong>.</p>
 <p>Log file sample:</p>

@@ -4929,7 +4929,8 @@ class RadioBrowserTermNavigator(SimpleCursesWidget):
 
         # Include 'term' only if type starts with 'by' (byname, bytag, etc.)
         if item_type.startswith('by') and 'term' in item:
-            parts.append(f'term is {item['term']}')
+            # fix for python 3.8
+            parts.append('term is {}'.format(item['term']))
 
         # Post data fields
         post = item.get('post_data', {})
@@ -4952,7 +4953,8 @@ class RadioBrowserTermNavigator(SimpleCursesWidget):
             parts.append(f'limit is {limit} results')
 
         if 'order' in post:
-            parts.append(f'order is {post['order']}')
+            # fix for python 3.8
+            parts.append('order is {}'.format(postt['order']))
         if 'reverse' in post:
             rev = 'descending' if post['reverse'] == 'true' else 'ascending'
             parts.append(rev)

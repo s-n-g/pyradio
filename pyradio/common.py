@@ -5,7 +5,7 @@ import io
 import csv
 import curses
 import hashlib
-from os import rename, remove, access, X_OK, getenv, makedirs
+from os import rename, remove, access, X_OK, getenv, makedirs, linesep
 from os.path import exists, dirname, join, expanduser, basename
 from shutil import which, move, Error as shutil_Error
 from enum import IntEnum
@@ -907,10 +907,10 @@ class CsvReadWrite():
             # We handle Traversable differently from the others
             if isinstance(in_file, Traversable):
                 # We open Traversable with its own open() method
-                with in_file.open(encoding='utf-8') as cfgfile:
+                with in_file.open(encoding='utf-8', newline='') as cfgfile:
                     return self._read_csv(cfgfile, current_version)
             # We open a file with the plain open()
-            with open(str(in_file), 'r', encoding='utf-8') as cfgfile:
+            with open(str(in_file), 'r', encoding='utf-8', newline='') as cfgfile:
                 return self._read_csv(cfgfile, current_version)
 
         except (FileNotFoundError, IOError, OSError) as e:
@@ -1039,8 +1039,8 @@ class CsvReadWrite():
         txt_out_file = out_file_str.replace('.csv', '.txt')
 
         try:
-            with open(txt_out_file, 'w', encoding='utf-8') as cfgfile:
-                writer = csv.writer(cfgfile)
+            with open(txt_out_file, 'w', encoding='utf-8', newline='') as cfgfile:
+                writer = csv.writer(cfgfile, lineterminator=linesep)
                 writer.writerow(['# PyRadio Playlist File Format:'])
                 writer.writerow(
                     ['# name', 'url', 'encoding', 'icon',

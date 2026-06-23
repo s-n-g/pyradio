@@ -1184,7 +1184,7 @@ Then, the mouse can be used as follows:
 
 ## Title logging
 
-Version **0.8.9.17** adds to **PyRadio** the ability to log the titles displayed at the bottom of its window, in a log file, for reference.
+**PyRadio** has the ability to log the titles displayed at the bottom of its window, in a log file, for reference.
 
 The logger, which is a special kind of *debug logger*, but works independently from the "*debug*" function, is actually a [Rotating File Handler](https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler), configured to write up to 5 files of around 50KB each (parameters **maxBytes=50000** and **backupCount=5**).
 
@@ -1194,6 +1194,9 @@ The function can be enabled:
 
 1. using the `-lt` (`--log-titles`) command line option, or
 2. by pressing "**W**" while in the **Main**, the **Playlist** or the **Register** mode.
+3. Through the **Configuration** window, section **Song Title Logging**. \
+\
+This section also presents the "**Number of files**" and "**Max file size**" parameters making the [Rotating File Handler's](https://docs.python.org/3/library/logging.handlers.html#logging.handlers.RotatingFileHandler) *backupCount* and *maxBytes* parameters configurable. Changes to these settings take effect the next time the title logger is initialized.
 
 The titles are written in a file called *pyradio-titles.log* which is located in the **Recordings Directory**.
 

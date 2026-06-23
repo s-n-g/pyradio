@@ -1336,7 +1336,6 @@ class PyRadioConfig(PyRadioStations):
         self.opts['continuous_playback'] = ['Continuous playback: ', False]
         self.opts['recording_dir'] = ['Recordings dir: ', '']
         self.opts['resource_opener'] = ['Resource Opener: ', 'auto']
-        self.opts['log_titles'] = ['Log titles: ', False]
         self.opts['use_os_media_controls'] = ['Enable OS Media Controls: ', False]
         self.opts['playlist_manngement_title'] = ['Playlist Management Options', '']
         self.opts['confirm_station_deletion'] = ['Confirm station deletion: ', True]
@@ -1352,6 +1351,10 @@ class PyRadioConfig(PyRadioStations):
         self.opts['use_station_icon'] = ['  Use station icon: ', True]
         self.opts['remove_station_icons'] = ['  Remove cached icons: ', True]
         self.opts['update_window_title'] = ['Update Window Title: ', True]
+        self.opts['log_title'] = ['Song Title Logging', '']
+        self.opts['log_titles'] = ['Log titles: ', False]
+        self.opts['log_titles_backup_count'] = ['  Number of files: ', '5']
+        self.opts['log_titles_max_kbytes'] = ['  Max file size: ', '50']
         self.opts['tts_title'] = ['TTS', '']
         self.opts['enable_tts'] = ['Enable TTS: ', False]
         self.opts['tts_volume'] = ['  Volume: ', '50']
@@ -1612,6 +1615,42 @@ class PyRadioConfig(PyRadioStations):
         old_val = self.opts['log_titles'][1]
         self.opts['log_titles'][1] = val
         if old_val != val:
+            self.dirty_config = True
+
+    @property
+    def log_titles_backup_count(self):
+        return self.opts['log_titles_backup_count'][1]
+
+    @log_titles_backup_count.setter
+    def log_titles_backup_count(self, value):
+        old_val = self.opts['log_titles_backup_count'][1]
+        try:
+            value = int(value)
+        except (ValueError, TypeError):
+            value = 5
+        if not 1 <= value <= 100:
+            value = 5
+        self.opts['log_titles_backup_count'][1] = str(value)
+        if old_val != str(value):
+            self.dirty_config = True
+
+    @property
+    def log_titles_max_kbytes(self):
+        return self.opts['log_titles_max_kbytes'][1]
+
+    @log_titles_max_kbytes.setter
+    def log_titles_max_kbytes(self, value):
+        old_val = self.opts['log_titles_max_kbytes'][1]
+        try:
+            value = int(value)
+        except (ValueError, TypeError):
+            value = 50
+        if not 50 <= value <= 10000:
+            value = 50
+        else:
+            value = int(round(value / 50.0) * 50)
+        self.opts['log_titles_max_kbytes'][1] = str(value)
+        if old_val != str(value):
             self.dirty_config = True
 
     @property
@@ -2765,6 +2804,24 @@ class PyRadioConfig(PyRadioStations):
                     self.opts['log_titles'][1] = True
                 else:
                     self.opts['log_titles'][1] = False
+            elif sp[0] == 'log_titles_backup_count':
+                try:
+                    x = int(sp[1])
+                except (ValueError, TypeError):
+                    x = 5
+                if 1 <= x <= 100:
+                    self.opts['log_titles_backup_count'][1] = str(x)
+                else:
+                    self.opts['log_titles_backup_count'][1] = '5'
+            elif sp[0] == 'log_titles_max_kbytes':
+                try:
+                    x = int(sp[1])
+                except (ValueError, TypeError):
+                    x = 50
+                if 50 <= x <= 10000 and x % 50 == 0:
+                    self.opts['log_titles_max_kbytes'][1] = str(x)
+                else:
+                    self.opts['log_titles_max_kbytes'][1] = '50'
             elif sp[0] == 'calculated_color_factor':
                 try:
                     t = round(float(sp[1]), 2)
@@ -3905,8 +3962,8 @@ class PyRadioLog():
                     path.join(
                         recording_dir,
                         'pyradio-titles.log'),
-                    maxBytes=50000,
-                    backupCount=5)
+                    maxBytes=int(self._cnf.log_titles_max_kbytes) * 1000,
+                    backupCount=int(self._cnf.log_titles_backup_count))
                 self.titles_handler.setFormatter(logging.Formatter(
                     fmt=self.PATTERN_TITLE,
                     datefmt='%b %d (%a) %H:%M')
